@@ -4,6 +4,7 @@ import 'package:swiftbill_app/invoice_page.dart';
 import 'package:swiftbill_app/analytics_page.dart';
 import 'package:swiftbill_app/appointments_page.dart';
 import 'package:swiftbill_app/profile_page.dart';
+import 'package:swiftbill_app/documents_page.dart';
 import 'business_data.dart';
 
 class HomePage extends StatefulWidget {
@@ -44,10 +45,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 100),
             children: [
               _buildHeroCard(context),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               _buildQuickStats(),
               const SizedBox(height: 24),
-              _buildFeaturesList(context),
+              _buildSectionHeader("Features", "Explore all capabilities"),
+              const SizedBox(height: 12),
+              _buildFeatureGrid(context),
             ],
           ),
           _buildBottomNav(context),
@@ -58,13 +61,27 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0.5,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
       leading: Builder(
         builder: (context) {
-          return IconButton(
-            icon: const Icon(Icons.menu, color: Colors.black, size: 28),
-            onPressed: () => Scaffold.of(context).openDrawer(),
+          return Container(
+            margin: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.menu_rounded, color: Color(0xFF111827), size: 24),
+              onPressed: () => Scaffold.of(context).openDrawer(),
+            ),
           );
         },
       ),
@@ -77,17 +94,27 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               Text(
                 name,
                 style: const TextStyle(
-                  color: Colors.black,
+                  color: Color(0xFF111827),
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const Text(
-                "UGX ACCOUNT",
-                style: TextStyle(
-                  color: Color(0xFF2563EB),
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF2563EB), Color(0xFF1E40AF)],
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  "UGX ACCOUNT",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ),
             ],
@@ -95,32 +122,24 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         },
       ),
       actions: [
-        GestureDetector(
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ProfilePage()),
+        Container(
+          margin: const EdgeInsets.only(right: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          child: Container(
-            margin: const EdgeInsets.only(right: 16),
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: ValueListenableBuilder<String?>(
-              valueListenable: BusinessData().logoPath,
-              builder: (context, logo, child) {
-                return logo != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          logo,
-                          fit: BoxFit.cover,
-                        ),
-                      )
-                    : const Icon(Icons.person, color: Colors.white, size: 20);
-              },
+          child: IconButton(
+            icon: const Icon(Icons.person_rounded, color: Color(0xFF2563EB), size: 24),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ProfilePage()),
             ),
           ),
         ),
@@ -137,87 +156,121 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF111827),
-              Color(0xFF1E293B),
-            ],
+            colors: [Color(0xFF111827), Color(0xFF1E293B)],
           ),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
+              color: const Color(0xFF111827).withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "Elevate Your Business with AI",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "SwiftBill AI is your complete toolkit for professional invoicing.",
-              style: TextStyle(
-                color: Colors.grey.shade400,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 20),
             Row(
               children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const InvoicePage()),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2563EB),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: const Text(
-                      "Start Invoicing",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2563EB).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  child: const Icon(Icons.auto_awesome, color: Color(0xFF2563EB), size: 24),
                 ),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const AnalyticsPage()),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.grey),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: const Text(
-                      "View Analytics",
-                      style: TextStyle(color: Colors.white),
+                const Expanded(
+                  child: Text(
+                    "Elevate Your Business with AI",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            Text(
+              "SwiftBill AI is your complete toolkit for professional invoicing, analytics, and business management.",
+              style: TextStyle(
+                color: Colors.grey.shade400,
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildHeroButton(
+                    context,
+                    "Start Invoicing",
+                    Icons.receipt_long,
+                    const InvoicePage(),
+                    isPrimary: true,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildHeroButton(
+                    context,
+                    "Analytics",
+                    Icons.analytics,
+                    const AnalyticsPage(),
+                    isPrimary: false,
+                  ),
+                ),
+              ],
+            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeroButton(
+    BuildContext context,
+    String text,
+    IconData icon,
+    Widget page, {
+    required bool isPrimary,
+  }) {
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        gradient: isPrimary
+            ? const LinearGradient(
+                colors: [Color(0xFF2563EB), Color(0xFF1E40AF)],
+              )
+            : null,
+        color: isPrimary ? null : Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: isPrimary ? null : Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => page)),
+          borderRadius: BorderRadius.circular(12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                text,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -234,29 +287,53 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         return Row(
           children: [
             Expanded(
-              child: _buildStatCard(
-                "Total Revenue",
-                "UGX ${_formatAmount(totalRevenue)}",
-                Icons.trending_up,
-                Colors.green,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AnalyticsPage()),
+                  );
+                },
+                child: _buildStatCard(
+                  "Total Revenue",
+                  "UGX ${_formatAmount(totalRevenue)}",
+                  Icons.trending_up,
+                  Colors.green,
+                ),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildStatCard(
-                "Invoices",
-                "$totalInvoices",
-                Icons.receipt,
-                Colors.blue,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const DocumentsPage()),
+                  );
+                },
+                child: _buildStatCard(
+                  "Invoices",
+                  "$totalInvoices",
+                  Icons.receipt,
+                  Colors.blue,
+                ),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildStatCard(
-                "Pending",
-                "$pendingInvoices",
-                Icons.pending,
-                Colors.orange,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const DocumentsPage()),
+                  );
+                },
+                child: _buildStatCard(
+                  "Pending",
+                  "$pendingInvoices",
+                  Icons.pending,
+                  Colors.orange,
+                ),
               ),
             ),
           ],
@@ -313,64 +390,66 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     );
   }
 
-  Widget _buildFeaturesList(BuildContext context) {
+  Widget _buildSectionHeader(String title, String subtitle) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _featureItem(
-          context,
-          Icons.description,
-          "Smart Invoicing",
-          "Create tax-inclusive documents with manual overrides",
-          Colors.orange.shade100,
-          const InvoicePage(),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF111827),
+          ),
         ),
-        _featureItem(
-          context,
-          Icons.memory,
-          "AI Branding",
-          "Generate professional logos instantly using AI",
-          Colors.blue.shade100,
-          const ProfilePage(),
-        ),
-        _featureItem(
-          context,
-          Icons.person_pin_circle,
-          "Appointment System",
-          "Keep your calendar organized with built-in booking manager",
-          Colors.grey.shade200,
-          const AppointmentsPage(),
-        ),
-        _featureItem(
-          context,
-          Icons.bar_chart,
-          "Financial Insights",
-          "Get automated summaries and visual charts",
-          Colors.blue.shade100,
-          const AnalyticsPage(),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.grey.shade600,
+          ),
         ),
       ],
     );
   }
 
-  Widget _featureItem(
-    BuildContext context,
-    IconData icon,
-    String title,
-    String sub,
-    Color iconBg,
-    Widget targetPage,
-  ) {
+  Widget _buildFeatureGrid(BuildContext context) {
+    final features = [
+      _FeatureData("Smart Invoicing", "Create tax-inclusive documents", Icons.description, Colors.orange, const InvoicePage()),
+      _FeatureData("AI Branding", "Generate professional logos", Icons.auto_awesome, const Color(0xFF2563EB), const ProfilePage()),
+      _FeatureData("Appointments", "Manage bookings & calendar", Icons.calendar_month, Colors.purple, const AppointmentsPage()),
+      _FeatureData("Analytics", "Financial insights & charts", Icons.bar_chart, Colors.green, const AnalyticsPage()),
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.95,
+      ),
+      itemCount: features.length,
+      itemBuilder: (context, index) {
+        final feature = features[index];
+        return _buildFeatureCard(context, feature);
+      },
+    );
+  }
+
+  Widget _buildFeatureCard(BuildContext context, _FeatureData feature) {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => targetPage),
+        MaterialPageRoute(builder: (context) => feature.page),
       ),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -379,40 +458,36 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             ),
           ],
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 25,
-              backgroundColor: iconBg,
-              child: Icon(icon, color: Colors.blue, size: 26),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: feature.color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(feature.icon, color: feature.color, size: 28),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    sub,
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
+            const Spacer(),
+            Text(
+              feature.title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                color: Color(0xFF111827),
               ),
             ),
-            const Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: Colors.grey,
+            const SizedBox(height: 6),
+            Text(
+              feature.subtitle,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 12,
+                height: 1.4,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -424,41 +499,60 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     return Align(
       alignment: Alignment.bottomCenter,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 24),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFF2563EB),
-          borderRadius: BorderRadius.circular(40),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF2563EB), Color(0xFF1E40AF)],
+          ),
+          borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF2563EB).withOpacity(0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
+              color: const Color(0xFF2563EB).withOpacity(0.4),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.home, color: Colors.white, size: 28),
-            ),
+            _buildNavItem(Icons.home_rounded, 0),
             const SizedBox(width: 40),
-            IconButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ProfilePage()),
-              ),
-              icon: const Icon(Icons.person, color: Colors.white, size: 28),
-            ),
+            _buildNavItem(Icons.person_rounded, 1),
           ],
         ),
       ),
     );
   }
 
+  Widget _buildNavItem(IconData icon, int index) {
+    final isSelected = _selectedIndex == index;
+    return GestureDetector(
+      onTap: () {
+        setState(() => _selectedIndex = index);
+        if (index == 1) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ProfilePage()),
+          );
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white.withOpacity(0.2) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Icon(icon, color: Colors.white, size: 28),
+      ),
+    );
+  }
+
   String _formatAmount(double amount) {
+    if (amount == 0) return "0";
     if (amount >= 1000000) {
       return "${(amount / 1000000).toStringAsFixed(1)}M";
     } else if (amount >= 1000) {
@@ -466,4 +560,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     }
     return amount.toStringAsFixed(0);
   }
+}
+
+class _FeatureData {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final Widget page;
+
+  _FeatureData(this.title, this.subtitle, this.icon, this.color, this.page);
 }

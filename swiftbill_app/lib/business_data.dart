@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 // Models
 class Invoice {
@@ -23,6 +25,28 @@ class Invoice {
   });
   
   double get balance => amount - paid;
+  
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'customerName': customerName,
+    'customerEmail': customerEmail,
+    'amount': amount,
+    'paid': paid,
+    'date': date.toIso8601String(),
+    'status': status,
+    'items': items.map((i) => i.toJson()).toList(),
+  };
+  
+  factory Invoice.fromJson(Map<String, dynamic> json) => Invoice(
+    id: json['id'],
+    customerName: json['customerName'],
+    customerEmail: json['customerEmail'],
+    amount: json['amount'],
+    paid: json['paid'],
+    date: DateTime.parse(json['date']),
+    status: json['status'],
+    items: (json['items'] as List).map((i) => InvoiceItem.fromJson(i)).toList(),
+  );
 }
 
 class InvoiceItem {
@@ -37,6 +61,18 @@ class InvoiceItem {
   });
   
   double get amount => quantity * rate;
+  
+  Map<String, dynamic> toJson() => {
+    'description': description,
+    'quantity': quantity,
+    'rate': rate,
+  };
+  
+  factory InvoiceItem.fromJson(Map<String, dynamic> json) => InvoiceItem(
+    description: json['description'],
+    quantity: json['quantity'],
+    rate: json['rate'],
+  );
 }
 
 class Appointment {
@@ -55,6 +91,24 @@ class Appointment {
     required this.status,
     this.fee,
   });
+  
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'type': type,
+    'clientName': clientName,
+    'dateTime': dateTime.toIso8601String(),
+    'status': status,
+    'fee': fee,
+  };
+  
+  factory Appointment.fromJson(Map<String, dynamic> json) => Appointment(
+    id: json['id'],
+    type: json['type'],
+    clientName: json['clientName'],
+    dateTime: DateTime.parse(json['dateTime']),
+    status: json['status'],
+    fee: json['fee'],
+  );
 }
 
 class Client {
@@ -73,6 +127,24 @@ class Client {
     required this.addedDate,
     required this.totalRevenue,
   });
+  
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'email': email,
+    'phone': phone,
+    'addedDate': addedDate.toIso8601String(),
+    'totalRevenue': totalRevenue,
+  };
+  
+  factory Client.fromJson(Map<String, dynamic> json) => Client(
+    id: json['id'],
+    name: json['name'],
+    email: json['email'],
+    phone: json['phone'],
+    addedDate: DateTime.parse(json['addedDate']),
+    totalRevenue: json['totalRevenue'],
+  );
 }
 
 class Activity {
@@ -95,30 +167,93 @@ class Activity {
   });
 }
 
-// Enhanced Business Data Manager
+// Enhanced Business Data Manager with Persistence
 class BusinessData {
   static final BusinessData _instance = BusinessData._internal();
   factory BusinessData() => _instance;
   BusinessData._internal() {
-    _initializeSampleData();
+    _loadData();
   }
   
   // Business Profile
   final ValueNotifier<String> name = ValueNotifier<String>("My Business");
   final ValueNotifier<String> email = ValueNotifier<String>("hello@business.com");
-  final ValueNotifier<String> address = ValueNotifier<String>("Plot 12, Kampala Road, Uganda");
+  final ValueNotifier<String> address = ValueNotifier<String>("Kampala, Uganda");
   final ValueNotifier<String?> logoPath = ValueNotifier<String?>(null);
   
-  // Data Lists
+  // Data Lists - Start Empty
   final ValueNotifier<List<Invoice>> invoices = ValueNotifier<List<Invoice>>([]);
   final ValueNotifier<List<Appointment>> appointments = ValueNotifier<List<Appointment>>([]);
   final ValueNotifier<List<Client>> clients = ValueNotifier<List<Client>>([]);
   final ValueNotifier<List<Activity>> activities = ValueNotifier<List<Activity>>([]);
   
+  // Load data from SharedPreferences
+  Future<void> _loadData() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Load business profile
+    name.value = prefs.getString('business_name') ?? "My Business";
+    email.value = prefs.getString('business_email') ?? "hello@business.com";
+    address.value = prefs.getString('business_address') ?? "Kampala, Uganda";
+    logoPath.value = prefs.getString('business_logo');
+    
+    // Load invoices
+    final invoicesJson = prefs.getString('invoices');
+    if (invoicesJson != null) {
+      final List<dynamic> invoicesList = jsonDecode(invoicesJson);
+      invoices.value = invoicesList.map((json) => Invoice.fromJson(json)).toList();
+    }
+    
+    // Load appointments
+    final appointmentsJson = prefs.getString('appointments');
+    if (appointmentsJson != null) {
+      final List<dynamic> appointmentsList = jsonDecode(appointmentsJson);
+      appointments.value = appointmentsList.map((json) => Appointment.fromJson(json)).toList();
+    }
+    
+    // Load clients
+    final clientsJson = prefs.getString('clients');
+    if (clientsJson != null) {
+      final List<dynamic> clientsList = jsonDecode(clientsJson);
+      clients.value = clientsList.map((json) => Client.fromJson(json)).toList();
+    }
+  }
+  
+  // Save data to SharedPreferences
+  Future<void> _saveData() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Save business profile
+    await prefs.setString('business_name', name.value);
+    await prefs.setString('business_email', email.value);
+    await prefs.setString('business_address', address.value);
+    if (logoPath.value != null) {
+      await prefs.setString('business_logo', logoPath.value!);
+    }
+    
+    // Save invoices
+    final invoicesJson = jsonEncode(invoices.value.map((i) => i.toJson()).toList());
+    await prefs.setString('invoices', invoicesJson);
+    
+    // Save appointments
+    final appointmentsJson = jsonEncode(appointments.value.map((a) => a.toJson()).toList());
+    await prefs.setString('appointments', appointmentsJson);
+    
+    // Save clients
+    final clientsJson = jsonEncode(clients.value.map((c) => c.toJson()).toList());
+    await prefs.setString('clients', clientsJson);
+  }
+  
   void updateBusiness({required String newName, required String newEmail, required String newAddress}) {
     name.value = newName;
     email.value = newEmail;
     address.value = newAddress;
+    _saveData();
+  }
+  
+  void updateLogo(String? path) {
+    logoPath.value = path;
+    _saveData();
   }
   
   // Invoice Management
@@ -131,6 +266,7 @@ class BusinessData {
       icon: Icons.receipt_long,
       color: Colors.blue,
     );
+    _saveData();
   }
   
   void updateInvoicePayment(String invoiceId, double paidAmount) {
@@ -160,6 +296,7 @@ class BusinessData {
         color: Colors.green,
       );
     }
+    _saveData();
   }
   
   // Appointment Management
@@ -172,6 +309,7 @@ class BusinessData {
       icon: Icons.calendar_today,
       color: Colors.orange,
     );
+    _saveData();
   }
   
   void updateAppointmentStatus(String appointmentId, String status) {
@@ -189,6 +327,7 @@ class BusinessData {
       return apt;
     }).toList();
     appointments.value = updatedAppointments;
+    _saveData();
   }
   
   // Client Management
@@ -200,6 +339,7 @@ class BusinessData {
       icon: Icons.person_add,
       color: Colors.purple,
     );
+    _saveData();
   }
   
   // Activity Management
@@ -263,7 +403,6 @@ class BusinessData {
   }
   
   Map<String, double> getRevenueByCategory() {
-    // Categorize based on invoice items
     Map<String, double> categoryRevenue = {
       'Consultations': 0.0,
       'Product Sales': 0.0,
@@ -289,132 +428,18 @@ class BusinessData {
     return categoryRevenue;
   }
   
-  // Initialize with sample data
-  void _initializeSampleData() {
-    // Sample Clients
-    clients.value = [
-      Client(
-        id: "C001",
-        name: "John Doe",
-        email: "john@example.com",
-        phone: "+256 772 123 456",
-        addedDate: DateTime.now().subtract(const Duration(days: 30)),
-        totalRevenue: 850000,
-      ),
-      Client(
-        id: "C002",
-        name: "Jane Smith",
-        email: "jane@example.com",
-        phone: "+256 772 234 567",
-        addedDate: DateTime.now().subtract(const Duration(days: 20)),
-        totalRevenue: 650000,
-      ),
-      Client(
-        id: "C003",
-        name: "Bob Wilson",
-        email: "bob@example.com",
-        phone: "+256 772 345 678",
-        addedDate: DateTime.now().subtract(const Duration(days: 10)),
-        totalRevenue: 450000,
-      ),
-    ];
+  // Clear all data (for testing or logout)
+  Future<void> clearAllData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
     
-    // Sample Invoices
-    invoices.value = [
-      Invoice(
-        id: "INV-001",
-        customerName: "John Doe",
-        customerEmail: "john@example.com",
-        amount: 500000,
-        paid: 500000,
-        date: DateTime.now().subtract(const Duration(days: 2)),
-        status: "Paid",
-        items: [
-          InvoiceItem(description: "Consultation Service", quantity: 2, rate: 250000),
-        ],
-      ),
-      Invoice(
-        id: "INV-002",
-        customerName: "Jane Smith",
-        customerEmail: "jane@example.com",
-        amount: 750000,
-        paid: 400000,
-        date: DateTime.now().subtract(const Duration(days: 5)),
-        status: "Partial",
-        items: [
-          InvoiceItem(description: "Product Package", quantity: 1, rate: 750000),
-        ],
-      ),
-      Invoice(
-        id: "INV-003",
-        customerName: "Bob Wilson",
-        customerEmail: "bob@example.com",
-        amount: 300000,
-        paid: 0,
-        date: DateTime.now().subtract(const Duration(days: 1)),
-        status: "Pending",
-        items: [
-          InvoiceItem(description: "Service Fee", quantity: 3, rate: 100000),
-        ],
-      ),
-    ];
-    
-    // Sample Appointments
-    appointments.value = [
-      Appointment(
-        id: "APT-001",
-        type: "Client Meeting",
-        clientName: "John Doe",
-        dateTime: DateTime.now().add(const Duration(hours: 2)),
-        status: "Confirmed",
-        fee: 150000,
-      ),
-      Appointment(
-        id: "APT-002",
-        type: "Product Demo",
-        clientName: "Jane Smith",
-        dateTime: DateTime.now().add(const Duration(days: 1)),
-        status: "Confirmed",
-        fee: 200000,
-      ),
-      Appointment(
-        id: "APT-003",
-        type: "Consultation",
-        clientName: "New Client",
-        dateTime: DateTime.now().add(const Duration(days: 2)),
-        status: "Pending",
-        fee: 100000,
-      ),
-    ];
-    
-    // Sample Activities
-    activities.value = [
-      Activity(
-        id: "ACT-001",
-        title: "Invoice INV-001 Paid",
-        type: "payment",
-        timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
-        amount: "+UGX 500,000",
-        icon: Icons.check_circle,
-        color: Colors.green,
-      ),
-      Activity(
-        id: "ACT-002",
-        title: "New Appointment Booked",
-        type: "appointment",
-        timestamp: DateTime.now().subtract(const Duration(hours: 1)),
-        icon: Icons.calendar_today,
-        color: Colors.blue,
-      ),
-      Activity(
-        id: "ACT-003",
-        title: "Payment Received",
-        type: "payment",
-        timestamp: DateTime.now().subtract(const Duration(hours: 3)),
-        amount: "+UGX 400,000",
-        icon: Icons.payments,
-        color: Colors.orange,
-      ),
-    ];
+    invoices.value = [];
+    appointments.value = [];
+    clients.value = [];
+    activities.value = [];
+    name.value = "My Business";
+    email.value = "hello@business.com";
+    address.value = "Kampala, Uganda";
+    logoPath.value = null;
   }
 }

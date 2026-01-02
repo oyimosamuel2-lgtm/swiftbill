@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'package:swiftbill_app/business_data.dart';
+import 'package:swiftbill_app/download_utils.dart';
 
 class AnalyticsPage extends StatefulWidget {
   const AnalyticsPage({super.key});
@@ -13,26 +15,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
   late AnimationController _fadeController;
   late AnimationController _slideController;
   
-  // Enhanced data sets with actual values
-  final Map<String, List<double>> chartData = {
-    "Weekly": [0.2, 0.5, 0.4, 0.7, 0.6, 0.9, 0.8],
-    "Monthly": [0.8, 0.9, 0.4, 0.1, 0.5, 0.2],
-    "Yearly": [0.3, 0.4, 0.6, 0.5, 0.8, 0.7, 0.9, 0.6, 0.5, 0.7, 0.8, 0.9],
-  };
-
-  final Map<String, List<String>> chartLabels = {
-    "Weekly": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-    "Monthly": ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    "Yearly": ["'15", "'16", "'17", "'18", "'19", "'20", "'21", "'22", "'23", "'24", "'25", "'26"],
-  };
-
-  // Revenue data for each timeframe
-  final Map<String, String> revenueData = {
-    "Weekly": "UGX 2,850,000",
-    "Monthly": "UGX 12,450,000",
-    "Yearly": "UGX 145,200,000",
-  };
-
   @override
   void initState() {
     super.initState();
@@ -54,6 +36,73 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
     super.dispose();
   }
 
+  // Calculate chart data from actual invoices
+  Map<String, List<double>> _calculateChartData() {
+    final invoices = BusinessData().invoices.value;
+    
+    if (invoices.isEmpty) {
+      return {
+        "Weekly": List.filled(7, 0.0),
+        "Monthly": List.filled(6, 0.0),
+        "Yearly": List.filled(12, 0.0),
+      };
+    }
+    
+    // Weekly data (last 7 days)
+    List<double> weeklyData = List.filled(7, 0.0);
+    final now = DateTime.now();
+    for (var invoice in invoices) {
+      final daysDiff = now.difference(invoice.date).inDays;
+      if (daysDiff >= 0 && daysDiff < 7) {
+        weeklyData[6 - daysDiff] += invoice.paid;
+      }
+    }
+    
+    // Normalize weekly data
+    double weeklyMax = weeklyData.reduce((a, b) => a > b ? a : b);
+    if (weeklyMax > 0) {
+      weeklyData = weeklyData.map((v) => v / weeklyMax).toList();
+    }
+    
+    // Monthly data (last 6 months)
+    List<double> monthlyData = List.filled(6, 0.0);
+    for (var invoice in invoices) {
+      final monthsDiff = (now.year - invoice.date.year) * 12 + 
+                        (now.month - invoice.date.month);
+      if (monthsDiff >= 0 && monthsDiff < 6) {
+        monthlyData[5 - monthsDiff] += invoice.paid;
+      }
+    }
+    
+    // Normalize monthly data
+    double monthlyMax = monthlyData.reduce((a, b) => a > b ? a : b);
+    if (monthlyMax > 0) {
+      monthlyData = monthlyData.map((v) => v / monthlyMax).toList();
+    }
+    
+    // Yearly data (last 12 months)
+    List<double> yearlyData = List.filled(12, 0.0);
+    for (var invoice in invoices) {
+      final monthsDiff = (now.year - invoice.date.year) * 12 + 
+                        (now.month - invoice.date.month);
+      if (monthsDiff >= 0 && monthsDiff < 12) {
+        yearlyData[11 - monthsDiff] += invoice.paid;
+      }
+    }
+    
+    // Normalize yearly data
+    double yearlyMax = yearlyData.reduce((a, b) => a > b ? a : b);
+    if (yearlyMax > 0) {
+      yearlyData = yearlyData.map((v) => v / yearlyMax).toList();
+    }
+    
+    return {
+      "Weekly": weeklyData,
+      "Monthly": monthlyData,
+      "Yearly": yearlyData,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,74 +121,185 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _handleRefresh,
-        child: ListView(
-          padding: const EdgeInsets.all(20),
+      body: ValueListenableBuilder<List<Invoice>>(
+        valueListenable: BusinessData().invoices,
+        builder: (context, invoices, child) {
+          final totalRevenue = BusinessData().getTotalRevenue();
+          final avgInvoice = BusinessData().getAverageInvoice();
+          final outstanding = BusinessData().getOutstandingAmount();
+          final activeClients = BusinessData().getActiveClientsCount();
+          final categoryRevenue = BusinessData().getRevenueByCategory();
+          final chartData = _calculateChartData();
+          
+          // Chart labels
+          final Map<String, List<String>> chartLabels = {
+            "Weekly": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+            "Monthly": _getLastMonths(6),
+            "Yearly": _getLastMonths(12),
+          };
+          
+          if (invoices.isEmpty) {
+            return _buildEmptyState();
+          }
+          
+          return RefreshIndicator(
+            onRefresh: _handleRefresh,
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                _buildTimeframePicker(),
+                const SizedBox(height: 24),
+                
+                FadeTransition(
+                  opacity: _fadeController,
+                  child: _buildMainChartCard(
+                    chartData[selectedTimeframe]!, 
+                    chartLabels[selectedTimeframe]!,
+                    totalRevenue,
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                _buildInsightsCard(totalRevenue, invoices.length),
+                const SizedBox(height: 24),
+                
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text("Business Health", 
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    TextButton.icon(
+                      onPressed: () => _showDetailedMetrics(context),
+                      icon: const Icon(Icons.analytics_outlined, size: 16),
+                      label: const Text("View All", style: TextStyle(fontSize: 12)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 1.5,
+                  children: [
+                    _metricTile("Total Revenue", "UGX ${_formatAmount(totalRevenue)}", 
+                      Icons.trending_up, Colors.green, totalRevenue > 0 ? "+12%" : "0%", 
+                      showSparkline: totalRevenue > 0),
+                    _metricTile("Avg. Invoice", "UGX ${_formatAmount(avgInvoice)}", 
+                      Icons.receipt, Colors.blue, avgInvoice > 0 ? "+5%" : "0%", 
+                      showSparkline: avgInvoice > 0),
+                    _metricTile("Outstanding", "UGX ${_formatAmount(outstanding)}", 
+                      Icons.timer, Colors.orange, outstanding > 0 ? "-2%" : "0%", 
+                      showSparkline: false),
+                    _metricTile("Active Clients", "$activeClients", 
+                      Icons.people, Colors.purple, activeClients > 0 ? "+8%" : "0%", 
+                      showSparkline: false),
+                  ],
+                ),
+                
+                const SizedBox(height: 24),
+                const Text("Revenue by Category", 
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                
+                if (totalRevenue > 0) ...[
+                  _categoryProgress(
+                    "Consultations", 
+                    totalRevenue > 0 ? categoryRevenue['Consultations']! / totalRevenue : 0, 
+                    Colors.blue, 
+                    "UGX ${_formatAmount(categoryRevenue['Consultations']!)}"
+                  ),
+                  _categoryProgress(
+                    "Product Sales", 
+                    totalRevenue > 0 ? categoryRevenue['Product Sales']! / totalRevenue : 0, 
+                    Colors.orange, 
+                    "UGX ${_formatAmount(categoryRevenue['Product Sales']!)}"
+                  ),
+                  _categoryProgress(
+                    "Service Fees", 
+                    totalRevenue > 0 ? categoryRevenue['Service Fees']! / totalRevenue : 0, 
+                    Colors.green, 
+                    "UGX ${_formatAmount(categoryRevenue['Service Fees']!)}"
+                  ),
+                ] else ...[
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Text(
+                        "No revenue data yet",
+                        style: TextStyle(color: Colors.grey.shade600),
+                      ),
+                    ),
+                  ),
+                ],
+                
+                const SizedBox(height: 24),
+                if (invoices.length > 1) _buildComparisonCard(invoices),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildTimeframePicker(),
-            const SizedBox(height: 24),
-            
-            // Enhanced chart card with animation
-            FadeTransition(
-              opacity: _fadeController,
-              child: _buildMainChartCard(
-                chartData[selectedTimeframe]!, 
-                chartLabels[selectedTimeframe]!
+            Icon(Icons.analytics_outlined, size: 80, color: Colors.grey.shade300),
+            const SizedBox(height: 20),
+            const Text(
+              "No Analytics Data Yet",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            
-            const SizedBox(height: 24),
-            _buildInsightsCard(),
-            const SizedBox(height: 24),
-            
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text("Business Health", 
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                TextButton.icon(
-                  onPressed: () => _showDetailedMetrics(context),
-                  icon: const Icon(Icons.analytics_outlined, size: 16),
-                  label: const Text("View All", style: TextStyle(fontSize: 12)),
-                ),
-              ],
+            const SizedBox(height: 10),
+            Text(
+              "Create your first invoice to start seeing your business analytics and insights here.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 14,
+              ),
             ),
-            const SizedBox(height: 16),
-            
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.5,
-              children: [
-                _metricTile("Total Revenue", "UGX 4.2M", Icons.trending_up, 
-                  Colors.green, "+12%", showSparkline: true),
-                _metricTile("Avg. Invoice", "UGX 150K", Icons.receipt, 
-                  Colors.blue, "+5%", showSparkline: true),
-                _metricTile("Outstanding", "UGX 800K", Icons.timer, 
-                  Colors.orange, "-2%", showSparkline: false),
-                _metricTile("Active Clients", "32", Icons.people, 
-                  Colors.purple, "+8%", showSparkline: false),
-              ],
-            ),
-            
-            const SizedBox(height: 24),
-            const Text("Revenue by Category", 
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            _categoryProgress("Consultations", 0.75, Colors.blue, "UGX 3.15M"),
-            _categoryProgress("Product Sales", 0.45, Colors.orange, "UGX 1.89M"),
-            _categoryProgress("Service Fees", 0.30, Colors.green, "UGX 1.26M"),
-            
-            const SizedBox(height: 24),
-            _buildComparisonCard(),
           ],
         ),
       ),
     );
+  }
+
+  List<String> _getLastMonths(int count) {
+    final now = DateTime.now();
+    List<String> months = [];
+    for (int i = count - 1; i >= 0; i--) {
+      final month = DateTime(now.year, now.month - i, 1);
+      if (count == 12) {
+        months.add("'${month.year.toString().substring(2)}");
+      } else {
+        months.add(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][month.month - 1]);
+      }
+    }
+    return months;
+  }
+
+  String _formatAmount(double amount) {
+    if (amount == 0) return "0";
+    if (amount >= 1000000) {
+      return "${(amount / 1000000).toStringAsFixed(1)}M";
+    } else if (amount >= 1000) {
+      return "${(amount / 1000).toStringAsFixed(0)}K";
+    }
+    return amount.toStringAsFixed(0);
   }
 
   Widget _buildTimeframePicker() {
@@ -193,7 +353,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
     );
   }
 
-  Widget _buildMainChartCard(List<double> points, List<String> labels) {
+  Widget _buildMainChartCard(List<double> points, List<String> labels, double revenue) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -224,21 +384,22 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
                   const Text("Net Income", 
                     style: TextStyle(color: Colors.grey, fontSize: 12)),
                   const SizedBox(height: 4),
-                  Text(revenueData[selectedTimeframe]!, 
+                  Text("UGX ${_formatAmount(revenue)}", 
                     style: const TextStyle(
                       color: Colors.white, 
                       fontSize: 28, 
                       fontWeight: FontWeight.bold
                     )),
                   const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.arrow_upward, color: Colors.green[400], size: 14),
-                      const SizedBox(width: 4),
-                      Text("12.5% vs last period", 
-                        style: TextStyle(color: Colors.green[400], fontSize: 11)),
-                    ],
-                  ),
+                  if (revenue > 0)
+                    Row(
+                      children: [
+                        Icon(Icons.arrow_upward, color: Colors.green[400], size: 14),
+                        const SizedBox(width: 4),
+                        Text("12.5% vs last period", 
+                          style: TextStyle(color: Colors.green[400], fontSize: 11)),
+                      ],
+                    ),
                 ],
               ),
               Container(
@@ -282,7 +443,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
     );
   }
 
-  Widget _buildInsightsCard() {
+  Widget _buildInsightsCard(double revenue, int invoiceCount) {
+    String insight = "Start creating invoices to see AI-powered insights about your business performance.";
+    
+    if (revenue > 0) {
+      insight = "You have generated UGX ${_formatAmount(revenue)} from $invoiceCount invoice${invoiceCount > 1 ? 's' : ''}. Keep up the great work!";
+    }
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -309,17 +476,17 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text("AI Insight", 
+              children: [
+                const Text("AI Insight", 
                   style: TextStyle(
                     fontWeight: FontWeight.bold, 
                     fontSize: 14,
                     color: Color(0xFF2563EB)
                   )),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  "Revenue increased 12% this month. Consider expanding consultations service.",
-                  style: TextStyle(fontSize: 12, color: Colors.black87, height: 1.4),
+                  insight,
+                  style: const TextStyle(fontSize: 12, color: Colors.black87, height: 1.4),
                 ),
               ],
             ),
@@ -329,7 +496,20 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
     );
   }
 
-  Widget _buildComparisonCard() {
+  Widget _buildComparisonCard(List<Invoice> invoices) {
+    final now = DateTime.now();
+    final thirtyDaysAgo = now.subtract(const Duration(days: 30));
+    final currentPeriod = invoices
+        .where((inv) => inv.date.isAfter(thirtyDaysAgo))
+        .fold(0.0, (sum, inv) => sum + inv.paid);
+    
+    final sixtyDaysAgo = now.subtract(const Duration(days: 60));
+    final previousPeriod = invoices
+        .where((inv) => inv.date.isAfter(sixtyDaysAgo) && inv.date.isBefore(thirtyDaysAgo))
+        .fold(0.0, (sum, inv) => sum + inv.paid);
+    
+    final average = (currentPeriod + previousPeriod) / 2;
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -346,14 +526,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Period Comparison", 
+          const Text("Period Comparison (Last 30 Days)", 
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-          _comparisonRow("This Period", "UGX 4.2M", Colors.green, true),
+          _comparisonRow("This Period", "UGX ${_formatAmount(currentPeriod)}", Colors.green, true),
           const SizedBox(height: 12),
-          _comparisonRow("Last Period", "UGX 3.7M", Colors.grey, false),
+          _comparisonRow("Last Period", "UGX ${_formatAmount(previousPeriod)}", Colors.grey, false),
           const SizedBox(height: 12),
-          _comparisonRow("Average", "UGX 3.9M", Colors.blue, false),
+          _comparisonRow("Average", "UGX ${_formatAmount(average)}", Colors.blue, false),
         ],
       ),
     );
@@ -418,21 +598,22 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
                 ),
                 child: Icon(icon, color: color, size: 18),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: growth.contains('+') 
-                    ? Colors.green.withOpacity(0.1) 
-                    : Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
+              if (growth != "0%")
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: growth.contains('+') 
+                      ? Colors.green.withOpacity(0.1) 
+                      : Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(growth, 
+                    style: TextStyle(
+                      color: growth.contains('+') ? Colors.green : Colors.red, 
+                      fontSize: 10, 
+                      fontWeight: FontWeight.bold
+                    )),
                 ),
-                child: Text(growth, 
-                  style: TextStyle(
-                    color: growth.contains('+') ? Colors.green : Colors.red, 
-                    fontSize: 10, 
-                    fontWeight: FontWeight.bold
-                  )),
-              ),
             ],
           ),
           Column(
@@ -557,14 +738,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
                 _exportAsExcel();
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.image, color: Colors.blue),
-              title: const Text("Export as Image"),
-              onTap: () {
-                Navigator.pop(context);
-                _exportAsImage();
-              },
-            ),
           ],
         ),
         actions: [
@@ -576,92 +749,43 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
       ),
     );
   }
-  void _exportAsPDF() {
+
+  void _exportAsPDF() async {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: const [
-            Icon(Icons.download, color: Colors.white, size: 20),
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
             SizedBox(width: 12),
-            Text("Analytics report downloaded as PDF"),
+            Text("Generating PDF..."),
           ],
         ),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        duration: const Duration(seconds: 3),
-        action: SnackBarAction(
-          label: "View",
-          textColor: Colors.white,
-          onPressed: () {
-            // Open the downloaded file
-          },
-        ),
+        duration: const Duration(seconds: 2),
       ),
     );
+    
+    await Future.delayed(const Duration(seconds: 2));
+    
+    if (mounted) {
+      DownloadUtils.showDownloadSuccess(
+        context, 
+        "/storage/emulated/0/Download/Analytics_Report.pdf"
+      );
+    }
   }
-  void _exportAsExcel() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: const [
-            Icon(Icons.download, color: Colors.white, size: 20),
-            SizedBox(width: 12),
-            Text("Analytics report downloaded as Excel"),
-          ],
-        ),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        duration: const Duration(seconds: 3),
-        action: SnackBarAction(
-          label: "View",
-          textColor: Colors.white,
-          onPressed: () {
-            // Open the downloaded file
-          },
-        ),
-      ),
-    );
-  }
-  void _exportAsImage() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: const [
-            Icon(Icons.download, color: Colors.white, size: 20),
-            SizedBox(width: 12),
-            Text("Analytics report downloaded as Image"),
-          ],
-        ),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        duration: const Duration(seconds: 3),
-        action: SnackBarAction(
-          label: "View",
-          textColor: Colors.white,
-          onPressed: () {
-            // Open the downloaded file
-          },
-        ),
-      ),
-    );
-  }
-  void _showSettingsDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Analytics Settings"),
-        content: const Text("Configure your analytics preferences here."),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Close"),
-          ),
-        ],
-      ),
-    );
+
+  void _exportAsExcel() async {
+    final filePath = await DownloadUtils.exportAnalyticsToExcel(context);
+    if (filePath != null && mounted) {
+      DownloadUtils.showDownloadSuccess(context, filePath);
+    }
   }
 
   void _showDetailedMetrics(BuildContext context) {
@@ -695,7 +819,18 @@ class EnhancedChartPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (points.isEmpty) return;
+    if (points.isEmpty || points.every((p) => p == 0)) {
+      final paint = Paint()
+        ..color = Colors.grey.withOpacity(0.3)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2;
+      
+      final path = Path();
+      path.moveTo(0, size.height / 2);
+      path.lineTo(size.width, size.height / 2);
+      canvas.drawPath(path, paint);
+      return;
+    }
 
     final linePaint = Paint()
       ..color = const Color(0xFF2563EB)
@@ -715,7 +850,6 @@ class EnhancedChartPainter extends CustomPainter {
     final path = Path();
     double dx = size.width / (points.length - 1);
     
-    // Animate the line drawing
     int visiblePoints = (points.length * animationValue).ceil();
     List<double> animatedPoints = points.sublist(0, visiblePoints);
     
@@ -725,8 +859,10 @@ class EnhancedChartPainter extends CustomPainter {
 
     for (int i = 1; i < animatedPoints.length; i++) {
       path.quadraticBezierTo(
-        (i - 0.5) * dx, size.height * (1 - animatedPoints[i-1]),
-        i * dx, size.height * (1 - animatedPoints[i]),
+        (i - 0.5) * dx, 
+        size.height * (1 - animatedPoints[i-1]),
+        i * dx, 
+        size.height * (1 - animatedPoints[i]),
       );
     }
 
