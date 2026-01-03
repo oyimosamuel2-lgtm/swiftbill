@@ -297,8 +297,8 @@ class _DocumentsPageState extends State<DocumentsPage> {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () => _shareInvoice(invoice),
-                  icon: const Icon(Icons.share, size: 16),
-                  label: const Text("Share"),
+                  icon: const Icon(Icons.share,color: Colors.white, size: 16),
+                  label: const Text("Share",style: TextStyle(color: Colors.white),),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2563EB),
                   ),

@@ -1,34 +1,61 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';  // Add this import
+import 'package:google_fonts/google_fonts.dart';
+import 'package:swiftbill_app/theme_manager.dart';
+import 'package:swiftbill_app/premium_manager.dart';
 import 'login_page.dart';
 
 void main() {
   runApp(const SwiftBillApp());
 }
 
-class SwiftBillApp extends StatelessWidget {
+class SwiftBillApp extends StatefulWidget {
   const SwiftBillApp({super.key});
+
+  @override
+  State<SwiftBillApp> createState() => _SwiftBillAppState();
+}
+
+class _SwiftBillAppState extends State<SwiftBillApp> {
+  final ThemeManager _themeManager = ThemeManager();
+  final PremiumManager _premiumManager = PremiumManager();
+
+  @override
+  void initState() {
+    super.initState();
+    _themeManager.addListener(_onThemeChanged);
+    _premiumManager.addListener(_onPremiumChanged);
+  }
+
+  @override
+  void dispose() {
+    _themeManager.removeListener(_onThemeChanged);
+    _premiumManager.removeListener(_onPremiumChanged);
+    super.dispose();
+  }
+
+  void _onThemeChanged() {
+    setState(() {});
+  }
+
+  void _onPremiumChanged() {
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primaryColor: const Color(0xFF2563EB),
-        scaffoldBackgroundColor: const Color(0xFFF3F6F9),
-        // Apply Inter font to the entire app
+      theme: ThemeManager.lightTheme.copyWith(
         textTheme: GoogleFonts.interTextTheme(
-          Theme.of(context).textTheme,
-        ),
-        // Optional: Also set default text style for better consistency
-        appBarTheme: AppBarTheme(
-          titleTextStyle: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
+          ThemeManager.lightTheme.textTheme,
         ),
       ),
+      darkTheme: ThemeManager.darkTheme.copyWith(
+        textTheme: GoogleFonts.interTextTheme(
+          ThemeManager.darkTheme.textTheme,
+        ),
+      ),
+      themeMode: _themeManager.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       home: const LoginPage(),
     );
   }

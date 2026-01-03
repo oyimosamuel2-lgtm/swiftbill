@@ -7,7 +7,10 @@ import 'package:swiftbill_app/appointments_page.dart';
 import 'package:swiftbill_app/analytics_page.dart';
 import 'package:swiftbill_app/profile_page.dart';
 import 'package:swiftbill_app/business_data.dart';
-import 'package:swiftbill_app/login_page.dart'; // Add this import
+import 'package:swiftbill_app/login_page.dart';
+import 'package:swiftbill_app/premium_gate.dart';
+import 'package:swiftbill_app/premium_manager.dart';
+import 'package:swiftbill_app/upgrade_page.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -16,22 +19,25 @@ class AppDrawer extends StatelessWidget {
     return Drawer(
       width: MediaQuery.of(context).size.width * 0.8,
       child: Container(
-        color: const Color(0xFFF3F6F9),
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: Column(
           children: [
-            _buildHeader(),
+            _buildHeader(context),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 children: [
                   _drawerItem(context, Icons.home_rounded, "Home", "Main business Hub", true, const HomePage()),
-                  _drawerItem(context, Icons.grid_view_rounded, "Overview", "Financial Insights", false, const OverviewPage()),
+                  _drawerItem(context, Icons.grid_view_rounded, "Overview", "Financial Insights", false, 
+                    PremiumGate(child: const OverviewPage(), featureName: "Overview")),
                   _drawerItem(context, Icons.receipt_long_rounded, "Documents", "Invoices & Receipts", false, const DocumentsPage()),
-                  _drawerItem(context, Icons.calendar_month_rounded, "Appointments", "Schedule & Meetings", false, const AppointmentsPage()),
-                  _drawerItem(context, Icons.analytics_rounded, "Analytics", "Performance Reports", false, const AnalyticsPage()),
+                  _drawerItem(context, Icons.calendar_month_rounded, "Appointments", "Schedule & Meetings", false, 
+                    PremiumGate(child: const AppointmentsPage(), featureName: "Appointments")),
+                  _drawerItem(context, Icons.analytics_rounded, "Analytics", "Performance Reports", false, 
+                    PremiumGate(child: const AnalyticsPage(), featureName: "Analytics")),
                   const SizedBox(height: 8),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Text("ACCOUNT",
                       style: TextStyle(
                         fontSize: 11,
@@ -49,18 +55,23 @@ class AppDrawer extends StatelessWidget {
       ),
     );
   }
-  Widget _buildHeader() {
+  
+  Widget _buildHeader(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 60, 20, 24),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF2563EB), Color(0xFF1E40AF)],
+          colors: isDark
+            ? [const Color(0xFF1E293B), const Color(0xFF3B82F6)]
+            : [const Color(0xFF2563EB), const Color(0xFF1E40AF)],
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF2563EB).withOpacity(0.3),
+            color: Theme.of(context).primaryColor.withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -151,6 +162,7 @@ class AppDrawer extends StatelessWidget {
       ),
     );
   }
+  
   Widget _buildQuickStat() {
     return ValueListenableBuilder<List<Invoice>>(
       valueListenable: BusinessData().invoices,
@@ -213,6 +225,7 @@ class AppDrawer extends StatelessWidget {
       },
     );
   }
+  
   Widget _drawerItem(
     BuildContext context,
     IconData icon,
@@ -221,15 +234,17 @@ class AppDrawer extends StatelessWidget {
     bool isActive,
     Widget targetPage,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
-        color: isActive ? Colors.white : Colors.transparent,
+        color: isActive ? Theme.of(context).cardColor : Colors.transparent,
         borderRadius: BorderRadius.circular(14),
         boxShadow: isActive
           ? [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -242,20 +257,20 @@ class AppDrawer extends StatelessWidget {
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: isActive
-              ? const Color(0xFF2563EB).withOpacity(0.1)
+              ? Theme.of(context).primaryColor.withOpacity(0.1)
               : Colors.grey.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
             icon,
-            color: isActive ? const Color(0xFF2563EB) : Colors.grey.shade600,
+            color: isActive ? Theme.of(context).primaryColor : Colors.grey.shade600,
             size: 22,
           ),
         ),
         title: Text(
           title,
           style: TextStyle(
-            color: isActive ? Colors.black : Colors.grey.shade700,
+            color: isActive ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
             fontSize: 14,
           ),
@@ -263,7 +278,9 @@ class AppDrawer extends StatelessWidget {
         subtitle: Text(
           sub,
           style: TextStyle(
-            color: isActive ? Colors.grey.shade600 : Colors.grey.shade500,
+            color: isActive 
+              ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6) 
+              : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             fontSize: 11,
           ),
         ),
@@ -271,8 +288,8 @@ class AppDrawer extends StatelessWidget {
           ? Container(
               width: 6,
               height: 6,
-              decoration: const BoxDecoration(
-                color: Color(0xFF2563EB),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor,
                 shape: BoxShape.circle,
               ),
             )
@@ -289,14 +306,17 @@ class AppDrawer extends StatelessWidget {
       ),
     );
   }
+  
   Widget _buildFooter(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, -4),
           ),
@@ -304,26 +324,35 @@ class AppDrawer extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.orange.shade100, Colors.orange.shade50],
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.star, color: Colors.orange, size: 20),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Text(
-                    "Upgrade to Pro for unlimited features",
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                  ),
+          GestureDetector(
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const UpgradePage()),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.orange.shade100, Colors.orange.shade50],
                 ),
-                Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey.shade600),
-              ],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.star, color: Colors.orange, size: 20),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      "Upgrade to Pro for unlimited features",
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey.shade600),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -345,6 +374,7 @@ class AppDrawer extends StatelessWidget {
       ),
     );
   }
+  
   String _formatAmount(double amount) {
     if (amount >= 1000000) {
       return "${(amount / 1000000).toStringAsFixed(1)}M";
@@ -353,6 +383,7 @@ class AppDrawer extends StatelessWidget {
     }
     return amount.toStringAsFixed(0);
   }
+  
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -386,9 +417,7 @@ class AppDrawer extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              // Close the dialog first
               Navigator.pop(context);
-              // Navigate to login page and remove all previous routes
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (context) => const LoginPage()),
                 (route) => false,
@@ -414,5 +443,3 @@ class AppDrawer extends StatelessWidget {
     );
   }
 }
-
-// Add this import at the top if not already present

@@ -5,7 +5,9 @@ import 'package:swiftbill_app/analytics_page.dart';
 import 'package:swiftbill_app/appointments_page.dart';
 import 'package:swiftbill_app/profile_page.dart';
 import 'package:swiftbill_app/documents_page.dart';
+import 'package:swiftbill_app/premium_gate.dart';
 import 'business_data.dart';
+import 'dart:io';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -35,31 +37,33 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F6F9),
-      appBar: _buildAppBar(),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: _buildAppBar(isDark),
       drawer: const AppDrawer(),
       body: Stack(
         children: [
           ListView(
             padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 100),
             children: [
-              _buildHeroCard(context),
+              _buildHeroCard(context, isDark),
               const SizedBox(height: 24),
-              _buildQuickStats(),
+              _buildQuickStats(isDark),
               const SizedBox(height: 24),
-              _buildSectionHeader("Features", "Explore all capabilities"),
+              _buildSectionHeader("Features", "Explore all capabilities", isDark),
               const SizedBox(height: 12),
-              _buildFeatureGrid(context),
+              _buildFeatureGrid(context, isDark),
             ],
           ),
-          _buildBottomNav(context),
+          _buildBottomNav(context, isDark),
         ],
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(bool isDark) {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
@@ -68,18 +72,20 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           return Container(
             margin: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
               ],
             ),
             child: IconButton(
-              icon: const Icon(Icons.menu_rounded, color: Color(0xFF111827), size: 24),
+              icon: Icon(Icons.menu_rounded, 
+                color: Theme.of(context).colorScheme.onSurface, 
+                size: 24),
               onPressed: () => Scaffold.of(context).openDrawer(),
             ),
           );
@@ -93,8 +99,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             children: [
               Text(
                 name,
-                style: const TextStyle(
-                  color: Color(0xFF111827),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
@@ -125,43 +131,81 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         Container(
           margin: const EdgeInsets.only(right: 16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
-          child: IconButton(
-            icon: const Icon(Icons.person_rounded, color: Color(0xFF2563EB), size: 24),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ProfilePage()),
-            ),
+          child: ValueListenableBuilder<String?>(
+            valueListenable: BusinessData().logoPath,
+            builder: (context, logoPath, child) {
+              return InkWell(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ProfilePage()),
+                ),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  padding: const EdgeInsets.all(4),
+                  child: logoPath != null && logoPath.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: logoPath.startsWith('http')
+                              ? Image.network(
+                                  logoPath,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(Icons.person_rounded, 
+                                      color: Theme.of(context).primaryColor, 
+                                      size: 28);
+                                  },
+                                )
+                              : Image.file(
+                                  File(logoPath),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(Icons.person_rounded, 
+                                      color: Theme.of(context).primaryColor, 
+                                      size: 28);
+                                  },
+                                ),
+                        )
+                      : Icon(Icons.person_rounded, 
+                          color: Theme.of(context).primaryColor, 
+                          size: 28),
+                ),
+              );
+            },
           ),
         ),
       ],
     );
   }
 
-  Widget _buildHeroCard(BuildContext context) {
+  Widget _buildHeroCard(BuildContext context, bool isDark) {
     return FadeTransition(
       opacity: _animationController,
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF111827), Color(0xFF1E293B)],
+            colors: isDark 
+              ? [const Color(0xFF1E293B), const Color(0xFF334155)]
+              : [const Color(0xFF111827), const Color(0xFF1E293B)],
           ),
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF111827).withOpacity(0.3),
+              color: (isDark ? const Color(0xFF1E293B) : const Color(0xFF111827)).withOpacity(0.3),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -220,7 +264,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                     context,
                     "Analytics",
                     Icons.analytics,
-                    const AnalyticsPage(),
+                    PremiumGate(child: const AnalyticsPage(), featureName: "Analytics"),
                     isPrimary: false,
                   ),
                 ),
@@ -276,7 +320,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     );
   }
 
-  Widget _buildQuickStats() {
+  Widget _buildQuickStats(bool isDark) {
     return ValueListenableBuilder<List<Invoice>>(
       valueListenable: BusinessData().invoices,
       builder: (context, invoices, child) {
@@ -291,7 +335,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const AnalyticsPage()),
+                    MaterialPageRoute(builder: (context) => PremiumGate(
+                      child: const AnalyticsPage(), 
+                      featureName: "Analytics"
+                    )),
                   );
                 },
                 child: _buildStatCard(
@@ -299,6 +346,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   "UGX ${_formatAmount(totalRevenue)}",
                   Icons.trending_up,
                   Colors.green,
+                  isDark,
                 ),
               ),
             ),
@@ -316,6 +364,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   "$totalInvoices",
                   Icons.receipt,
                   Colors.blue,
+                  isDark,
                 ),
               ),
             ),
@@ -333,6 +382,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   "$pendingInvoices",
                   Icons.pending,
                   Colors.orange,
+                  isDark,
                 ),
               ),
             ),
@@ -342,15 +392,15 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(String label, String value, IconData icon, Color color, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -371,7 +421,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           Text(
             label,
             style: TextStyle(
-              color: Colors.grey.shade600,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
@@ -379,8 +429,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
-              color: Color(0xFF111827),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -390,16 +440,16 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     );
   }
 
-  Widget _buildSectionHeader(String title, String subtitle) {
+  Widget _buildSectionHeader(String title, String subtitle, bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF111827),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 4),
@@ -407,19 +457,21 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           subtitle,
           style: TextStyle(
             fontSize: 13,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildFeatureGrid(BuildContext context) {
+  Widget _buildFeatureGrid(BuildContext context, bool isDark) {
     final features = [
       _FeatureData("Smart Invoicing", "Create tax-inclusive documents", Icons.description, Colors.orange, const InvoicePage()),
       _FeatureData("AI Branding", "Generate professional logos", Icons.auto_awesome, const Color(0xFF2563EB), const ProfilePage()),
-      _FeatureData("Appointments", "Manage bookings & calendar", Icons.calendar_month, Colors.purple, const AppointmentsPage()),
-      _FeatureData("Analytics", "Financial insights & charts", Icons.bar_chart, Colors.green, const AnalyticsPage()),
+      _FeatureData("Appointments", "Manage bookings & calendar", Icons.calendar_month, Colors.purple, 
+        PremiumGate(child: const AppointmentsPage(), featureName: "Appointments")),
+      _FeatureData("Analytics", "Financial insights & charts", Icons.bar_chart, Colors.green, 
+        PremiumGate(child: const AnalyticsPage(), featureName: "Analytics")),
     ];
 
     return GridView.builder(
@@ -434,12 +486,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       itemCount: features.length,
       itemBuilder: (context, index) {
         final feature = features[index];
-        return _buildFeatureCard(context, feature);
+        return _buildFeatureCard(context, feature, isDark);
       },
     );
   }
 
-  Widget _buildFeatureCard(BuildContext context, _FeatureData feature) {
+  Widget _buildFeatureCard(BuildContext context, _FeatureData feature, bool isDark) {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -448,11 +500,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -472,17 +524,17 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             const Spacer(),
             Text(
               feature.title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 15,
-                color: Color(0xFF111827),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 6),
             Text(
               feature.subtitle,
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 fontSize: 12,
                 height: 1.4,
               ),
@@ -495,7 +547,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     );
   }
 
-  Widget _buildBottomNav(BuildContext context) {
+  Widget _buildBottomNav(BuildContext context, bool isDark) {
     return Align(
       alignment: Alignment.bottomCenter,
       child: Container(
@@ -531,13 +583,17 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   Widget _buildNavItem(IconData icon, int index) {
     final isSelected = _selectedIndex == index;
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         setState(() => _selectedIndex = index);
         if (index == 1) {
-          Navigator.push(
+          await Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const ProfilePage()),
           );
+          // Reset to home when coming back from profile
+          if (mounted) {
+            setState(() => _selectedIndex = 0);
+          }
         }
       },
       child: Container(
