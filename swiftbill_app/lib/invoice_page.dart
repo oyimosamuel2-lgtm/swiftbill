@@ -425,7 +425,11 @@ class _InvoicePageState extends State<InvoicePage> {
                       _summaryRow("Amount Paid", '$currencyPrefix${paid.toStringAsFixed(2)}', color: Colors.green.shade700, isBold: true, fontSize: 18),
                       if (paid < total) ...[
                         const Divider(height: 24),
-                        _summaryRow("Change Due", '$currencyPrefix${(paid - total).abs().toStringAsFixed(2)}', color: Colors.orange, isBold: true),
+                        _summaryRow("Balance Due", '$currencyPrefix${(total - paid).toStringAsFixed(2)}', color: Colors.red, isBold: true),
+                      ],
+                      if (paid > total) ...[
+                        const Divider(height: 24),
+                        _summaryRow("Change Due", '$currencyPrefix${(paid - total).toStringAsFixed(2)}', color: Colors.orange, isBold: true),
                       ],
                     ],
                   ],
@@ -663,16 +667,37 @@ class _InvoicePageState extends State<InvoicePage> {
     }
     
     final prefix = isInvoice ? "INV" : "RCP";
+    
+    // Determine status based on document type and payment
+    String status;
+    if (isInvoice) {
+      // For invoices: check if fully paid, partially paid, or pending
+      if (paid >= total) {
+        status = "Paid";
+      } else if (paid > 0) {
+        status = "Partial";
+      } else {
+        status = "Pending";
+      }
+    } else {
+      // For receipts: check if exact amount, overpaid (change due), or underpaid
+      if (paid >= total) {
+        status = "Paid"; // Exact or overpaid (will show change due in UI)
+      } else if (paid > 0) {
+        status = "Partial"; // Customer didn't pay enough
+      } else {
+        status = "Pending"; // No payment received (shouldn't happen for receipts)
+      }
+    }
+    
     final invoice = Invoice(
       id: "$prefix-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}",
       customerName: _customerNameController.text,
       customerEmail: _customerEmailController.text,
       amount: total,
-      paid: isInvoice ? paid : total, // Receipts are always fully paid
+      paid: paid,
       date: DateTime.now(),
-      status: isInvoice 
-          ? (paid >= total ? "Paid" : paid > 0 ? "Partial" : "Pending")
-          : "Paid", // Receipts are always paid
+      status: status,
       items: items,
     );
     

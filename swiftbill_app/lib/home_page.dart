@@ -325,66 +325,154 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       valueListenable: BusinessData().invoices,
       builder: (context, invoices, child) {
         final totalRevenue = invoices.fold(0.0, (sum, inv) => sum + inv.paid);
-        final totalInvoices = invoices.length;
-        final pendingInvoices = invoices.where((inv) => inv.paid < inv.amount).length;
+        
+        // Separate invoices and receipts
+        final totalInvoices = invoices.where((inv) => inv.id.startsWith('INV')).length;
+        final totalReceipts = invoices.where((inv) => inv.id.startsWith('RCP')).length;
+        final pendingInvoices = invoices.where((inv) => inv.id.startsWith('INV') && inv.paid < inv.amount).length;
 
-        return Row(
+        return Column(
           children: [
-            Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => PremiumGate(
-                      child: const AnalyticsPage(), 
-                      featureName: "Analytics"
-                    )),
-                  );
-                },
-                child: _buildStatCard(
-                  "Total Revenue",
-                  "UGX ${_formatAmount(totalRevenue)}",
-                  Icons.trending_up,
-                  Colors.green,
-                  isDark,
+            // Revenue card (full width)
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => PremiumGate(
+                    child: const AnalyticsPage(), 
+                    featureName: "Analytics"
+                  )),
+                );
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.trending_up, color: Colors.green, size: 28),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Total Revenue",
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "UGX ${_formatAmount(totalRevenue)}",
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (totalRevenue > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          "+12%",
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const DocumentsPage()),
-                  );
-                },
-                child: _buildStatCard(
-                  "Invoices",
-                  "$totalInvoices",
-                  Icons.receipt,
-                  Colors.blue,
-                  isDark,
+            const SizedBox(height: 12),
+            // Invoices, Receipts, and Pending row
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const DocumentsPage()),
+                      );
+                    },
+                    child: _buildStatCard(
+                      "Invoices",
+                      "$totalInvoices",
+                      Icons.receipt,
+                      Colors.blue,
+                      isDark,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const DocumentsPage()),
-                  );
-                },
-                child: _buildStatCard(
-                  "Pending",
-                  "$pendingInvoices",
-                  Icons.pending,
-                  Colors.orange,
-                  isDark,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const DocumentsPage()),
+                      );
+                    },
+                    child: _buildStatCard(
+                      "Receipts",
+                      "$totalReceipts",
+                      Icons.check_circle,
+                      Colors.green,
+                      isDark,
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const DocumentsPage(initialFilter: "Pending"),
+                        ),
+                      );
+                    },
+                    child: _buildStatCard(
+                      "Pending",
+                      "$pendingInvoices",
+                      Icons.pending,
+                      Colors.orange,
+                      isDark,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -590,7 +678,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             context,
             MaterialPageRoute(builder: (context) => const ProfilePage()),
           );
-          // Reset to home when coming back from profile
           if (mounted) {
             setState(() => _selectedIndex = 0);
           }

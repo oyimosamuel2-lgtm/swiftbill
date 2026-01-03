@@ -7,8 +7,8 @@ plugins {
 
 android {
     namespace = "com.example.swiftbill_app"
-    compileSdk = 35  // Changed from flutter.compileSdkVersion
-    ndkVersion = "27.0.12077973"  // Added explicit NDK version
+    compileSdk = 35
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -21,10 +21,11 @@ android {
 
     defaultConfig {
         applicationId = "com.example.swiftbill_app"
-        minSdk = 21  // Changed from flutter.minSdkVersion
-        targetSdk = 34  // Changed from flutter.targetSdkVersion
-        versionCode = 1  // Changed from flutter.versionCode
-        versionName = "1.0.0"  // Changed from flutter.versionName
+        minSdk = 23  // Firebase requires minimum 21
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0.0"
+        multiDexEnabled = true  // ADDED: Required for Firebase
     }
 
     buildTypes {
@@ -39,3 +40,19 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Import the Firebase BoM (Bill of Materials)
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+
+    // Firebase products - versions managed by BoM
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-auth")  // ADDED: For authentication
+    implementation("com.google.firebase:firebase-firestore")  // ADDED: For database
+    
+    // AndroidX and Kotlin support
+    implementation("androidx.multidex:multidex:2.0.1")  // ADDED: For MultiDex support
+}
+
+// IMPORTANT: Apply Google Services plugin at the very end
+apply(plugin = "com.google.gms.google-services")

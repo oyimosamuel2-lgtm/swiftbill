@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:swiftbill_app/home_page.dart';
+import 'package:swiftbill_app/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
+  
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
@@ -13,6 +15,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   bool isLoading = false;
+  final AuthService _authService = AuthService();
+  
   @override
   void initState() {
     super.initState();
@@ -29,11 +33,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     ).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeOut));
     _animationController.forward();
   }
+  
   @override
   void dispose() {
     _animationController.dispose();
     super.dispose();
   }
+  
   @override
   Widget build(BuildContext context) {
     final String googleSvg = '''
@@ -178,6 +184,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       ),
     );
   }
+  
   Widget _socialButton(
     String text,
     Widget icon,
@@ -238,32 +245,128 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       ),
     );
   }
+  
+  // OPTIMIZED: Waits for auth state to propagate, then lets StreamBuilder handle navigation
   void _handleGoogleLogin(BuildContext context) async {
+    print('🔵 [${DateTime.now()}] Google login initiated');
     setState(() => isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() => isLoading = false);
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
-      );
+    
+    try {
+      final startTime = DateTime.now();
+      final result = await _authService.signInWithGoogle();
+      final signInDuration = DateTime.now().difference(startTime);
+      
+      print('🔵 [${DateTime.now()}] Sign in completed in ${signInDuration.inMilliseconds}ms');
+      print('   Result: ${result != null ? "Success" : "Cancelled"}');
+      
+      if (result != null) {
+        print('✅ User signed in: ${result.user?.email}');
+        print('   UID: ${result.user?.uid}');
+        
+        // Wait for Firebase auth state to propagate
+        print('⏳ Waiting for auth state propagation...');
+        await Future.delayed(const Duration(milliseconds: 150));
+        
+        // Double-check that user is actually signed in
+        final currentUser = FirebaseAuth.instance.currentUser;
+        print('🔍 Current user after delay: ${currentUser?.email ?? "null"}');
+        
+        if (currentUser != null) {
+          print('✅ Auth state confirmed, StreamBuilder should navigate now');
+          // Keep loading state - widget will be unmounted when HomePage loads
+        } else {
+          print('⚠️ Auth state not propagated yet, waiting longer...');
+          await Future.delayed(const Duration(milliseconds: 200));
+          
+          final retryUser = FirebaseAuth.instance.currentUser;
+          if (retryUser != null) {
+            print('✅ Auth state confirmed on retry');
+          } else {
+            print('❌ Auth state still null after retry');
+            setState(() => isLoading = false);
+          }
+        }
+      } else {
+        print('⚠️ User cancelled Google sign-in');
+        setState(() => isLoading = false);
+      }
+    } catch (e) {
+      print('❌ Google login error: $e');
+      setState(() => isLoading = false);
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error: ${e.toString()}"),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
     }
   }
+  
   void _handleAppleLogin(BuildContext context) async {
+    print('🍎 Apple login initiated');
     setState(() => isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() => isLoading = false);
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
-      );
+    
+    try {
+      final result = await _authService.signInWithApple();
+      
+      if (result != null) {
+        print('✅ User signed in with Apple: ${result.user?.email}');
+        await Future.delayed(const Duration(milliseconds: 150));
+        // StreamBuilder will handle navigation
+      } else {
+        setState(() => isLoading = false);
+      }
+    } catch (e) {
+      print('❌ Apple login error: $e');
+      setState(() => isLoading = false);
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error: ${e.toString()}"),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
     }
   }
-  void _handleGuestLogin(BuildContext context) {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const HomePage()),
-    );
+  
+  void _handleGuestLogin(BuildContext context) async {
+    print('👤 Guest login initiated');
+    setState(() => isLoading = true);
+    
+    try {
+      await _authService.signInAnonymously();
+      print('✅ Guest signed in');
+      await Future.delayed(const Duration(milliseconds: 150));
+      // StreamBuilder will handle navigation
+    } catch (e) {
+      print('❌ Guest login error: $e');
+      setState(() => isLoading = false);
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error: ${e.toString()}"),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    }
   }
 }

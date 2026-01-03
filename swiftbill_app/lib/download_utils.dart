@@ -7,6 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:excel/excel.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:swiftbill_app/business_data.dart';
+import 'package:share_plus/share_plus.dart'; // Add this to pubspec.yaml
 
 class DownloadUtils {
   
@@ -19,8 +20,12 @@ class DownloadUtils {
         
         print('Android SDK: $sdkInt');
         
-        if (sdkInt >= 30) {
-          // Android 11 and above - request manage external storage
+        if (sdkInt >= 33) {
+          // Android 13+ (API 33+) - No storage permission needed for app-specific files
+          print('Android 13+: No permission needed for app files');
+          return true;
+        } else if (sdkInt >= 30) {
+          // Android 11-12 (API 30-32) - request manage external storage
           if (await Permission.manageExternalStorage.isGranted) {
             return true;
           }
@@ -28,7 +33,6 @@ class DownloadUtils {
           final status = await Permission.manageExternalStorage.request();
           
           if (status.isDenied || status.isPermanentlyDenied) {
-            // Show dialog to open settings
             if (context.mounted) {
               _showPermissionDialog(context);
             }
@@ -57,7 +61,24 @@ class DownloadUtils {
   static Future<String> getDownloadPath() async {
     try {
       if (Platform.isAndroid) {
-        // Try primary external storage first
+        final androidInfo = await DeviceInfoPlugin().androidInfo;
+        final sdkInt = androidInfo.version.sdkInt;
+        
+        if (sdkInt >= 29) {
+          // Android 10+ (API 29+): Use app-specific directory (no permission needed)
+          final directory = await getExternalStorageDirectory();
+          if (directory != null) {
+            // Create Downloads folder in app directory
+            final downloadDir = Directory('${directory.path}/Downloads');
+            if (!await downloadDir.exists()) {
+              await downloadDir.create(recursive: true);
+            }
+            print('Using app-specific directory: ${downloadDir.path}');
+            return downloadDir.path;
+          }
+        }
+        
+        // Fallback: Try public Download directory (requires permission)
         final possiblePaths = [
           '/storage/emulated/0/Download',
           '/storage/emulated/0/Downloads',
@@ -84,7 +105,7 @@ class DownloadUtils {
       print('Error getting download path: $e');
     }
     
-    // Fallback to app directory
+    // Final fallback to app directory
     final appDir = await getApplicationDocumentsDirectory();
     print('Using app directory: ${appDir.path}');
     return appDir.path;
@@ -414,6 +435,55 @@ class DownloadUtils {
     }
   }
   
+  // FIXED: Share file using share_plus
+  static Future<void> shareFile(String filePath, BuildContext context) async {
+    try {
+      final file = File(filePath);
+      
+      if (!await file.exists()) {
+        print('File does not exist: $filePath');
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('File not found. Please download it first.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+      
+      print('Sharing file: $filePath');
+      
+      // Share the file using share_plus
+      final result = await Share.shareXFiles(
+        [XFile(filePath)],
+        text: 'SwiftBill Document',
+        subject: 'Document from SwiftBill',
+      );
+      
+      print('Share result: ${result.status}');
+      
+      if (result.status == ShareResultStatus.success) {
+        print('File shared successfully');
+      } else if (result.status == ShareResultStatus.dismissed) {
+        print('Share dismissed by user');
+      }
+    } catch (e, stackTrace) {
+      print('Error sharing file: $e');
+      print('Stack trace: $stackTrace');
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error sharing file: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+  
   // Show permission dialog
   static void _showPermissionDialog(BuildContext context) {
     showDialog(
@@ -444,7 +514,7 @@ class DownloadUtils {
     );
   }
   
-  // Show success message with file location
+  // Show success message with file location and share option
   static void showDownloadSuccess(BuildContext context, String filePath) {
     if (!context.mounted) return;
     
@@ -475,25 +545,24 @@ class DownloadUtils {
               style: const TextStyle(fontSize: 12, color: Colors.white),
             ),
             const SizedBox(height: 4),
-            const Text(
-              "📁 Saved in Downloads folder",
-              style: TextStyle(fontSize: 11, color: Colors.white70),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              "Open 'File Manager' app to view",
-              style: TextStyle(fontSize: 10, color: Colors.white60, fontStyle: FontStyle.italic),
+            Text(
+              "📁 ${filePath.split('/').sublist(0, filePath.split('/').length - 1).join('/')}",
+              style: const TextStyle(fontSize: 10, color: Colors.white70),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 8),
+        duration: const Duration(seconds: 6),
         action: SnackBarAction(
-          label: "OK",
+          label: "SHARE",
           textColor: Colors.white,
-          onPressed: () {},
+          onPressed: () {
+            shareFile(filePath, context);
+          },
         ),
       ),
     );

@@ -26,6 +26,23 @@ class Invoice {
   
   double get balance => amount - paid;
   
+  // Helper method to get the correct status based on payment
+  String get actualStatus {
+    if (paid >= amount) {
+      return "Paid";
+    } else if (paid > 0) {
+      return "Partial";
+    } else {
+      return "Pending";
+    }
+  }
+  
+  // Check if this is overpaid (for receipts with change due)
+  bool get isOverpaid => paid > amount;
+  
+  // Get change amount (for receipts)
+  double get changeDue => paid > amount ? paid - amount : 0.0;
+  
   Map<String, dynamic> toJson() => {
     'id': id,
     'customerName': customerName,
@@ -272,6 +289,16 @@ class BusinessData {
   void updateInvoicePayment(String invoiceId, double paidAmount) {
     final updatedInvoices = invoices.value.map((inv) {
       if (inv.id == invoiceId) {
+        // Calculate the correct status based on payment
+        String newStatus;
+        if (paidAmount >= inv.amount) {
+          newStatus = "Paid";
+        } else if (paidAmount > 0) {
+          newStatus = "Partial";
+        } else {
+          newStatus = "Pending";
+        }
+        
         return Invoice(
           id: inv.id,
           customerName: inv.customerName,
@@ -279,7 +306,7 @@ class BusinessData {
           amount: inv.amount,
           paid: paidAmount,
           date: inv.date,
-          status: paidAmount >= inv.amount ? "Paid" : "Partial",
+          status: newStatus,
           items: inv.items,
         );
       }
@@ -382,7 +409,13 @@ class BusinessData {
   }
   
   int getPendingInvoicesCount() {
-    return invoices.value.where((inv) => inv.status != "Paid").length;
+    // Count invoices that have any balance due (not fully paid)
+    return invoices.value.where((inv) => inv.balance > 0).length;
+  }
+  
+  int getPartialPaymentCount() {
+    // Count invoices with partial payment (paid > 0 but balance > 0)
+    return invoices.value.where((inv) => inv.paid > 0 && inv.balance > 0).length;
   }
   
   List<Invoice> getRecentInvoices({int limit = 5}) {

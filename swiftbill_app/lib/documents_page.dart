@@ -2,13 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:swiftbill_app/business_data.dart';
 
 class DocumentsPage extends StatefulWidget {
-  const DocumentsPage({super.key});
+  final String initialFilter;
+  const DocumentsPage({super.key, this.initialFilter = "All"});
   @override
   State<DocumentsPage> createState() => _DocumentsPageState();
 }
 
 class _DocumentsPageState extends State<DocumentsPage> {
-  String selectedFilter = "All";
+  late String selectedFilter;
+  String selectedType = "All"; // All, Invoices, Receipts
+  
+  @override
+  void initState() {
+    super.initState();
+    selectedFilter = widget.initialFilter;
+  }
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -49,46 +58,152 @@ class _DocumentsPageState extends State<DocumentsPage> {
                   const Text("No documents yet",
                     style: TextStyle(color: Colors.grey, fontSize: 16)),
                   const SizedBox(height: 8),
-                  const Text("Create your first invoice to get started",
+                  const Text("Create your first invoice or receipt to get started",
                     style: TextStyle(color: Colors.grey, fontSize: 12)),
                 ],
               ),
             );
           }
-          final filtered = selectedFilter == "All" 
-            ? invoices 
-            : invoices.where((inv) => inv.status == selectedFilter).toList();
+          
+          // First filter by type (All, Invoices, Receipts)
+          List<Invoice> typeFiltered = invoices;
+          if (selectedType == "Invoices") {
+            typeFiltered = invoices.where((inv) => inv.id.startsWith('INV')).toList();
+          } else if (selectedType == "Receipts") {
+            typeFiltered = invoices.where((inv) => inv.id.startsWith('RCP')).toList();
+          }
+          
+          // Then filter by status
+          List<Invoice> filtered = typeFiltered;
+          if (selectedFilter == "Pending") {
+            // Show all unpaid and partially paid documents
+            filtered = typeFiltered.where((inv) => inv.balance > 0).toList();
+          } else if (selectedFilter != "All") {
+            filtered = typeFiltered.where((inv) => inv.status == selectedFilter).toList();
+          }
+          
           return Column(
             children: [
               _buildSummaryCards(invoices),
               const SizedBox(height: 16),
+              
+              // Type filter tabs
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: ["All", "Invoices", "Receipts"].map((type) {
+                      bool isSelected = selectedType == type;
+                      return Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              selectedType = type;
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: isSelected ? const Color(0xFF2563EB) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(
+                              child: Text(
+                                type,
+                                style: TextStyle(
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  color: isSelected ? Colors.white : Colors.grey,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 12),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("${filtered.length} Documents",
+                    Text("${filtered.length} Document${filtered.length != 1 ? 's' : ''}",
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       )),
-                    Text("Filter: $selectedFilter",
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 12,
-                      )),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _getFilterColor(selectedFilter).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: _getFilterColor(selectedFilter).withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(_getFilterIcon(selectedFilter), 
+                            size: 14, 
+                            color: _getFilterColor(selectedFilter)),
+                          const SizedBox(width: 6),
+                          Text(selectedFilter,
+                            style: TextStyle(
+                              color: _getFilterColor(selectedFilter),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            )),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 12),
+              
               Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) {
-                    return _invoiceCard(filtered[index]);
-                  },
-                ),
+                child: filtered.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.filter_list_off, 
+                              size: 48, 
+                              color: Colors.grey.shade300),
+                            const SizedBox(height: 12),
+                            Text(
+                              "No $selectedFilter ${selectedType.toLowerCase()} found",
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          return _invoiceCard(filtered[index]);
+                        },
+                      ),
               ),
             ],
           );
@@ -96,10 +211,38 @@ class _DocumentsPageState extends State<DocumentsPage> {
       ),
     );
   }
+  
+  Color _getFilterColor(String filter) {
+    switch (filter) {
+      case "Paid":
+        return Colors.green;
+      case "Partial":
+        return Colors.orange;
+      case "Pending":
+        return Colors.red;
+      default:
+        return const Color(0xFF2563EB);
+    }
+  }
+  
+  IconData _getFilterIcon(String filter) {
+    switch (filter) {
+      case "Paid":
+        return Icons.check_circle;
+      case "Partial":
+        return Icons.hourglass_empty;
+      case "Pending":
+        return Icons.pending;
+      default:
+        return Icons.description;
+    }
+  }
+  
   Widget _buildSummaryCards(List<Invoice> invoices) {
     final total = invoices.fold(0.0, (sum, inv) => sum + inv.amount);
     final paid = invoices.fold(0.0, (sum, inv) => sum + inv.paid);
     final pending = total - paid;
+    
     return Container(
       height: 120,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -135,6 +278,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
       ),
     );
   }
+  
   Widget _summaryCard(String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -176,10 +320,16 @@ class _DocumentsPageState extends State<DocumentsPage> {
       ),
     );
   }
+  
   Widget _invoiceCard(Invoice invoice) {
     Color statusColor = invoice.status == "Paid" ? Colors.green :
                        invoice.status == "Partial" ? Colors.orange :
                        Colors.red;
+    
+    // Determine document type
+    bool isReceipt = invoice.id.startsWith('RCP');
+    String documentType = isReceipt ? "Receipt" : "Invoice";
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -202,13 +352,38 @@ class _DocumentsPageState extends State<DocumentsPage> {
             color: statusColor.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(Icons.description, color: statusColor, size: 24),
+          child: Icon(
+            isReceipt ? Icons.receipt : Icons.description, 
+            color: statusColor, 
+            size: 24
+          ),
         ),
-        title: Text(invoice.id,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-          )),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(invoice.id,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                )),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: isReceipt 
+                    ? Colors.purple.withOpacity(0.1)
+                    : const Color(0xFF2563EB).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(documentType,
+                style: TextStyle(
+                  color: isReceipt ? Colors.purple : const Color(0xFF2563EB),
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                )),
+            ),
+          ],
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -251,14 +426,110 @@ class _DocumentsPageState extends State<DocumentsPage> {
         children: [
           const Divider(),
           const SizedBox(height: 8),
+          _detailRow("Document Type", documentType),
+          const SizedBox(height: 8),
           _detailRow("Items", invoice.items.length.toString()),
           const SizedBox(height: 8),
-          _detailRow("Amount", "UGX ${_formatAmount(invoice.amount)}"),
+          _detailRow("Total Amount", "UGX ${_formatAmount(invoice.amount)}"),
           const SizedBox(height: 8),
-          _detailRow("Paid", "UGX ${_formatAmount(invoice.paid)}"),
-          const SizedBox(height: 8),
-          _detailRow("Balance", "UGX ${_formatAmount(invoice.balance)}",
-            valueColor: invoice.balance > 0 ? Colors.red : Colors.green),
+          _detailRow("Amount Paid", "UGX ${_formatAmount(invoice.paid)}",
+            valueColor: Colors.green),
+          if (invoice.balance > 0) ...[
+            const SizedBox(height: 8),
+            _detailRow("Balance Due", "UGX ${_formatAmount(invoice.balance)}",
+              valueColor: Colors.red),
+          ],
+          
+          // Show change due for receipts with overpayment
+          if (invoice.id.startsWith('RCP') && invoice.paid > invoice.amount) ...[
+            const SizedBox(height: 8),
+            _detailRow("Change Due", "UGX ${_formatAmount(invoice.paid - invoice.amount)}",
+              valueColor: Colors.orange),
+          ],
+          
+          // Show partial payment indicator if balance is not zero (partial payment made)
+          if (invoice.balance > 0 && invoice.paid > 0) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.orange.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          invoice.id.startsWith('RCP') 
+                              ? "Underpayment - Change Owed to Business"
+                              : "Partial Payment",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: Colors.orange,
+                          )),
+                        const SizedBox(height: 2),
+                        Text(
+                          "${((invoice.paid / invoice.amount) * 100).toStringAsFixed(1)}% paid",
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          
+          // Show overpayment indicator for receipts with change due
+          if (invoice.id.startsWith('RCP') && invoice.paid > invoice.amount) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.blue.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("Overpayment - Change Due to Customer",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: Colors.blue,
+                          )),
+                        const SizedBox(height: 2),
+                        Text(
+                          "Return UGX ${_formatAmount(invoice.paid - invoice.amount)} to customer",
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          
           const SizedBox(height: 16),
           const Text("Items:",
             style: TextStyle(
@@ -291,14 +562,17 @@ class _DocumentsPageState extends State<DocumentsPage> {
                   onPressed: () => _downloadInvoice(invoice),
                   icon: const Icon(Icons.download, size: 16),
                   label: const Text("Download"),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: Colors.grey.shade300),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () => _shareInvoice(invoice),
-                  icon: const Icon(Icons.share,color: Colors.white, size: 16),
-                  label: const Text("Share",style: TextStyle(color: Colors.white),),
+                  icon: const Icon(Icons.share, color: Colors.white, size: 16),
+                  label: const Text("Share", style: TextStyle(color: Colors.white)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2563EB),
                   ),
@@ -306,10 +580,27 @@ class _DocumentsPageState extends State<DocumentsPage> {
               ),
             ],
           ),
+          
+          // Add Edit Payment button for documents with balance due
+          if (invoice.balance > 0) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _showEditPaymentDialog(invoice),
+                icon: const Icon(Icons.payments, color: Colors.white, size: 16),
+                label: const Text("Update Payment", style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
+  
   Widget _detailRow(String label, String value, {Color? valueColor}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -328,6 +619,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
       ],
     );
   }
+  
   String _formatAmount(double amount) {
     if (amount >= 1000000) {
       return "${(amount / 1000000).toStringAsFixed(1)}M";
@@ -336,9 +628,11 @@ class _DocumentsPageState extends State<DocumentsPage> {
     }
     return amount.toStringAsFixed(0);
   }
+  
   String _formatDate(DateTime date) {
     return "${date.day}/${date.month}/${date.year}";
   }
+  
   void _downloadInvoice(Invoice invoice) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -349,12 +643,203 @@ class _DocumentsPageState extends State<DocumentsPage> {
       ),
     );
   }
+  
   void _shareInvoice(Invoice invoice) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text("Sharing ${invoice.id}..."),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+  
+  void _showEditPaymentDialog(Invoice invoice) {
+    final paymentController = TextEditingController(
+      text: invoice.paid > 0 ? invoice.paid.toStringAsFixed(0) : '',
+    );
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.payments, color: Colors.green),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text("Update Payment", style: TextStyle(fontSize: 18)),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Document:", style: TextStyle(fontSize: 12)),
+                      Text(invoice.id, 
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        )),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Total Amount:", style: TextStyle(fontSize: 12)),
+                      Text("UGX ${invoice.amount.toStringAsFixed(0)}", 
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        )),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Balance Due:", style: TextStyle(fontSize: 12)),
+                      Text("UGX ${invoice.balance.toStringAsFixed(0)}", 
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Colors.red,
+                        )),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              "Enter Total Amount Paid:",
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: paymentController,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: "Amount Paid (UGX)",
+                hintText: "0",
+                prefixIcon: const Icon(Icons.money, color: Colors.green),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.green, width: 2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Row(
+                children: const [
+                  Icon(Icons.info_outline, size: 16, color: Colors.blue),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "Enter the total cumulative amount paid, not just the new payment.",
+                      style: TextStyle(fontSize: 11, color: Colors.blue),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final newPaid = double.tryParse(paymentController.text) ?? 0.0;
+              
+              if (newPaid < 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Amount cannot be negative"),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+              
+              // Update the payment
+              BusinessData().updateInvoicePayment(invoice.id, newPaid);
+              
+              Navigator.pop(context);
+              
+              // Show success message
+              String message;
+              if (newPaid >= invoice.amount) {
+                message = "Payment updated! Invoice is now fully paid.";
+              } else if (newPaid > invoice.paid) {
+                message = "Payment updated! Remaining balance: UGX ${(invoice.amount - newPaid).toStringAsFixed(0)}";
+              } else {
+                message = "Payment updated successfully!";
+              }
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: Colors.white),
+                      const SizedBox(width: 12),
+                      Expanded(child: Text(message)),
+                    ],
+                  ),
+                  backgroundColor: Colors.green,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text("Update Payment", 
+              style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }

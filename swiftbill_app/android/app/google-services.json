@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "157269568434",
+    "project_id": "swiftbill-ed9cb",
+    "storage_bucket": "swiftbill-ed9cb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:157269568434:android:507b375c8bbbf2ce8612ab",
+        "android_client_info": {
+          "package_name": "com.example.swiftbill_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "157269568434-k08i79ejr0oci3m2qilqcdq9dsstm3qm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.swiftbill_app",
+            "certificate_hash": "434c7930ce1563e13b39773b3d62cf985d738cbc"
+          }
+        },
+        {
+          "client_id": "157269568434-62g4uj9gsfdahjqce1qr5tfpp0vq1l6m.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDvKpCm8RPjGhqzjV0gagXjMJP7EP425-g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "157269568434-62g4uj9gsfdahjqce1qr5tfpp0vq1l6m.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "157269568434-al7gaj75ldr3ei0065ugl1fopmgjcqqs.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.swiftbillApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
