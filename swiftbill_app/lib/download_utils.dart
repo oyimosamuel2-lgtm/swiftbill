@@ -1,5 +1,13 @@
+// Updated download_utils.dart with MediaStore integration for Android 13+
+// - Added MethodChannel for saving to public Downloads via MediaStore
+// - In exportInvoiceToPDF, check for Android 13+ and use channel if possible
+// - Fallback to app-specific if channel fails
+// - Similar logic can be added to exportAnalyticsToExcel if needed
+
 import 'dart:io';
+import 'dart:typed_data'; // For Uint8List
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // For MethodChannel
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pdf/pdf.dart';
@@ -10,6 +18,7 @@ import 'package:swiftbill_app/business_data.dart';
 import 'package:share_plus/share_plus.dart'; // Add this to pubspec.yaml
 
 class DownloadUtils {
+  static const MethodChannel _channel = MethodChannel('com.example.swiftbill_app/download_channel'); // Replace with your app's package name
   
   // Request storage permission - simplified and more reliable
   static Future<bool> requestStoragePermission(BuildContext context) async {
@@ -21,7 +30,7 @@ class DownloadUtils {
         print('Android SDK: $sdkInt');
         
         if (sdkInt >= 33) {
-          // Android 13+ (API 33+) - No storage permission needed for app-specific files
+          // Android 13+ (API 33+) - No storage permission needed for app-specific files or MediaStore
           print('Android 13+: No permission needed for app files');
           return true;
         } else if (sdkInt >= 30) {
@@ -57,7 +66,7 @@ class DownloadUtils {
     return true;
   }
   
-  // Get download directory with multiple fallbacks
+  // Get download directory with multiple fallbacks (used for app-specific saves)
   static Future<String> getDownloadPath() async {
     try {
       if (Platform.isAndroid) {
@@ -344,20 +353,43 @@ class DownloadUtils {
         ),
       );
       
-      // Get download path
-      final downloadPath = await getDownloadPath();
-      final fileName = '${invoice.id}.pdf';
-      final filePath = '$downloadPath/$fileName';
+      final pdfBytes = await pdf.save(); // Get bytes
       
-      print('Saving PDF to: $filePath');
+      String? filePath;
       
-      // Save file
-      final file = File(filePath);
-      await file.writeAsBytes(await pdf.save());
+      if (Platform.isAndroid) {
+        final androidInfo = await DeviceInfoPlugin().androidInfo;
+        final sdkInt = androidInfo.version.sdkInt;
+        
+        if (sdkInt >= 33) {
+          // Use MediaStore for public Downloads on Android 13+
+          try {
+            final result = await _channel.invokeMethod('saveToDownloads', {
+              'fileName': '${invoice.id}.pdf',
+              'bytes': pdfBytes,
+            });
+            if (result != null) {
+              filePath = '/storage/emulated/0/Download/${invoice.id}.pdf'; // Approximate path for display
+              print('Saved to public Downloads via MediaStore');
+            }
+          } catch (e) {
+            print('MediaStore error: $e');
+          }
+        }
+      }
+      
+      // Fallback to app-specific or legacy save if MediaStore fails or not Android 13+
+      if (filePath == null) {
+        final downloadPath = await getDownloadPath();
+        filePath = '$downloadPath/${invoice.id}.pdf';
+        final file = File(filePath);
+        await file.writeAsBytes(pdfBytes);
+        print('Saved to: $filePath');
+      }
       
       print('PDF saved successfully: $filePath');
-      print('File exists: ${await file.exists()}');
-      print('File size: ${await file.length()} bytes');
+      print('File exists: ${await File(filePath).exists()}');
+      print('File size: ${await File(filePath).length()} bytes');
       
       return filePath;
     } catch (e, stackTrace) {
@@ -367,7 +399,7 @@ class DownloadUtils {
     }
   }
   
-  // Export analytics report as Excel
+  // Export analytics report as Excel (similar MediaStore logic can be added here if needed)
   static Future<String?> exportAnalyticsToExcel(BuildContext context) async {
     try {
       print('Starting Excel export');
@@ -407,27 +439,49 @@ class DownloadUtils {
         ]);
       }
       
-      // Get download path
-      final downloadPath = await getDownloadPath();
-      final fileName = 'SwiftBill_Analytics_${DateTime.now().millisecondsSinceEpoch}.xlsx';
-      final filePath = '$downloadPath/$fileName';
+      final fileBytes = excel.save();
+      if (fileBytes == null) return null;
       
-      print('Saving Excel to: $filePath');
+      String? filePath;
       
-      // Save file
-      var fileBytes = excel.save();
-      if (fileBytes != null) {
-        final file = File(filePath);
-        await file.writeAsBytes(fileBytes);
+      if (Platform.isAndroid) {
+        final androidInfo = await DeviceInfoPlugin().androidInfo;
+        final sdkInt = androidInfo.version.sdkInt;
         
-        print('Excel saved successfully: $filePath');
-        print('File exists: ${await file.exists()}');
-        print('File size: ${await file.length()} bytes');
-        
-        return filePath;
+        if (sdkInt >= 33) {
+          // Use MediaStore for public Downloads
+          try {
+            final fileName = 'SwiftBill_Analytics_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+            final result = await _channel.invokeMethod('saveToDownloads', {
+              'fileName': fileName,
+              'bytes': Uint8List.fromList(fileBytes),
+              'mimeType': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            });
+            if (result != null) {
+              filePath = '/storage/emulated/0/Download/$fileName';
+              print('Saved Excel to public Downloads via MediaStore');
+            }
+          } catch (e) {
+            print('MediaStore error: $e');
+          }
+        }
       }
       
-      return null;
+      // Fallback
+      if (filePath == null) {
+        final downloadPath = await getDownloadPath();
+        final fileName = 'SwiftBill_Analytics_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+        filePath = '$downloadPath/$fileName';
+        final file = File(filePath);
+        await file.writeAsBytes(fileBytes);
+        print('Saved Excel to: $filePath');
+      }
+      
+      print('Excel saved successfully: $filePath');
+      print('File exists: ${await File(filePath).exists()}');
+      print('File size: ${await File(filePath).length()} bytes');
+      
+      return filePath;
     } catch (e, stackTrace) {
       print('Error exporting Excel: $e');
       print('Stack trace: $stackTrace');
@@ -514,12 +568,18 @@ class DownloadUtils {
     );
   }
   
-  // Show success message with file location and share option
+  // Show success message with file location and share option, added note for app-specific storage
   static void showDownloadSuccess(BuildContext context, String filePath) {
     if (!context.mounted) return;
     
     // Extract just the filename
     final fileName = filePath.split('/').last;
+    
+    // Determine if app-specific
+    final isAppSpecific = filePath.contains('/Android/data/');
+    final accessNote = isAppSpecific 
+        ? "\nNote: Saved in app storage - use a file manager to access or share from here." 
+        : "";
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -546,9 +606,9 @@ class DownloadUtils {
             ),
             const SizedBox(height: 4),
             Text(
-              "📁 ${filePath.split('/').sublist(0, filePath.split('/').length - 1).join('/')}",
+              "📁 ${filePath.split('/').sublist(0, filePath.split('/').length - 1).join('/')}$accessNote",
               style: const TextStyle(fontSize: 10, color: Colors.white70),
-              maxLines: 2,
+              maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
           ],

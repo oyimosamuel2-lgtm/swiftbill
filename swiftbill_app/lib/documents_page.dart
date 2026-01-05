@@ -1,5 +1,10 @@
+// Updated documents_page.dart with fixes for const_with_non_const errors:
+// - Removed 'const' from Row children lists where Expanded is used (lines around 563 and 579, and similar in dialog)
+// - Added 'const' to TextStyle in the dialog for consistency
+
 import 'package:flutter/material.dart';
 import 'package:swiftbill_app/business_data.dart';
+import 'package:swiftbill_app/download_utils.dart';
 
 class DocumentsPage extends StatefulWidget {
   final String initialFilter;
@@ -542,25 +547,36 @@ class _DocumentsPageState extends State<DocumentsPage> {
   
   String _formatDate(DateTime date) => "${date.day}/${date.month}/${date.year}";
   
-  void _downloadInvoice(Invoice invoice) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("${invoice.id} downloaded"),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+  Future<void> _downloadInvoice(Invoice invoice) async {
+    final path = await DownloadUtils.exportInvoiceToPDF(invoice, context);
+    if (path != null) {
+      DownloadUtils.showDownloadSuccess(context, path);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text("Failed to download document"),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    }
   }
   
-  void _shareInvoice(Invoice invoice) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Sharing ${invoice.id}..."),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+  Future<void> _shareInvoice(Invoice invoice) async {
+    final path = await DownloadUtils.exportInvoiceToPDF(invoice, context);
+    if (path != null) {
+      await DownloadUtils.shareFile(path, context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text("Failed to generate document for sharing"),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    }
   }
   
   void _showEditPaymentDialog(Invoice invoice) {
@@ -654,13 +670,13 @@ class _DocumentsPageState extends State<DocumentsPage> {
                 border: Border.all(color: Colors.blue.shade200),
               ),
               child: Row(
-                children: const [
-                  Icon(Icons.info_outline, size: 16, color: Colors.blue),
-                  SizedBox(width: 8),
+                children: [
+                  const Icon(Icons.info_outline, size: 16, color: Colors.blue),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       "Enter the total cumulative amount paid, not just the new payment.",
-                      style: TextStyle(fontSize: 11, color: Colors.blue),
+                      style: const TextStyle(fontSize: 11, color: Colors.blue),
                     ),
                   ),
                 ],
