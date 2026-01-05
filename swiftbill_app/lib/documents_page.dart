@@ -10,7 +10,7 @@ class DocumentsPage extends StatefulWidget {
 
 class _DocumentsPageState extends State<DocumentsPage> {
   late String selectedFilter;
-  String selectedType = "All"; // All, Invoices, Receipts
+  String selectedType = "All";
   
   @override
   void initState() {
@@ -31,11 +31,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.filter_list, color: Colors.black),
-            onSelected: (value) {
-              setState(() {
-                selectedFilter = value;
-              });
-            },
+            onSelected: (value) => setState(() => selectedFilter = value),
             itemBuilder: (context) => [
               const PopupMenuItem(value: "All", child: Text("All Documents")),
               const PopupMenuItem(value: "Paid", child: Text("Paid")),
@@ -55,8 +51,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
                 children: [
                   Icon(Icons.description, size: 64, color: Colors.grey.shade300),
                   const SizedBox(height: 16),
-                  const Text("No documents yet",
-                    style: TextStyle(color: Colors.grey, fontSize: 16)),
+                  const Text("No documents yet", style: TextStyle(color: Colors.grey, fontSize: 16)),
                   const SizedBox(height: 8),
                   const Text("Create your first invoice or receipt to get started",
                     style: TextStyle(color: Colors.grey, fontSize: 12)),
@@ -65,7 +60,6 @@ class _DocumentsPageState extends State<DocumentsPage> {
             );
           }
           
-          // First filter by type (All, Invoices, Receipts)
           List<Invoice> typeFiltered = invoices;
           if (selectedType == "Invoices") {
             typeFiltered = invoices.where((inv) => inv.id.startsWith('INV')).toList();
@@ -73,10 +67,8 @@ class _DocumentsPageState extends State<DocumentsPage> {
             typeFiltered = invoices.where((inv) => inv.id.startsWith('RCP')).toList();
           }
           
-          // Then filter by status
           List<Invoice> filtered = typeFiltered;
           if (selectedFilter == "Pending") {
-            // Show all unpaid and partially paid documents
             filtered = typeFiltered.where((inv) => inv.balance > 0).toList();
           } else if (selectedFilter != "All") {
             filtered = typeFiltered.where((inv) => inv.status == selectedFilter).toList();
@@ -87,7 +79,6 @@ class _DocumentsPageState extends State<DocumentsPage> {
               _buildSummaryCards(invoices),
               const SizedBox(height: 16),
               
-              // Type filter tabs
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Container(
@@ -108,11 +99,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
                       bool isSelected = selectedType == type;
                       return Expanded(
                         child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              selectedType = type;
-                            });
-                          },
+                          onTap: () => setState(() => selectedType = type),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -145,10 +132,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text("${filtered.length} Document${filtered.length != 1 ? 's' : ''}",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      )),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
@@ -159,9 +143,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(_getFilterIcon(selectedFilter), 
-                            size: 14, 
-                            color: _getFilterColor(selectedFilter)),
+                          Icon(_getFilterIcon(selectedFilter), size: 14, color: _getFilterColor(selectedFilter)),
                           const SizedBox(width: 6),
                           Text(selectedFilter,
                             style: TextStyle(
@@ -183,26 +165,17 @@ class _DocumentsPageState extends State<DocumentsPage> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.filter_list_off, 
-                              size: 48, 
-                              color: Colors.grey.shade300),
+                            Icon(Icons.filter_list_off, size: 48, color: Colors.grey.shade300),
                             const SizedBox(height: 12),
-                            Text(
-                              "No $selectedFilter ${selectedType.toLowerCase()} found",
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 14,
-                              ),
-                            ),
+                            Text("No $selectedFilter ${selectedType.toLowerCase()} found",
+                              style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
                           ],
                         ),
                       )
                     : ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         itemCount: filtered.length,
-                        itemBuilder: (context, index) {
-                          return _invoiceCard(filtered[index]);
-                        },
+                        itemBuilder: (context, index) => _invoiceCard(filtered[index]),
                       ),
               ),
             ],
@@ -214,27 +187,19 @@ class _DocumentsPageState extends State<DocumentsPage> {
   
   Color _getFilterColor(String filter) {
     switch (filter) {
-      case "Paid":
-        return Colors.green;
-      case "Partial":
-        return Colors.orange;
-      case "Pending":
-        return Colors.red;
-      default:
-        return const Color(0xFF2563EB);
+      case "Paid": return Colors.green;
+      case "Partial": return Colors.orange;
+      case "Pending": return Colors.red;
+      default: return const Color(0xFF2563EB);
     }
   }
   
   IconData _getFilterIcon(String filter) {
     switch (filter) {
-      case "Paid":
-        return Icons.check_circle;
-      case "Partial":
-        return Icons.hourglass_empty;
-      case "Pending":
-        return Icons.pending;
-      default:
-        return Icons.description;
+      case "Paid": return Icons.check_circle;
+      case "Partial": return Icons.hourglass_empty;
+      case "Pending": return Icons.pending;
+      default: return Icons.description;
     }
   }
   
@@ -248,32 +213,11 @@ class _DocumentsPageState extends State<DocumentsPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          Expanded(
-            child: _summaryCard(
-              "Total",
-              "UGX ${_formatAmount(total)}",
-              Icons.receipt_long,
-              Colors.blue,
-            ),
-          ),
+          Expanded(child: _summaryCard("Total", "UGX ${_formatAmount(total)}", Icons.receipt_long, Colors.blue)),
           const SizedBox(width: 12),
-          Expanded(
-            child: _summaryCard(
-              "Received",
-              "UGX ${_formatAmount(paid)}",
-              Icons.check_circle,
-              Colors.green,
-            ),
-          ),
+          Expanded(child: _summaryCard("Received", "UGX ${_formatAmount(paid)}", Icons.check_circle, Colors.green)),
           const SizedBox(width: 12),
-          Expanded(
-            child: _summaryCard(
-              "Pending",
-              "UGX ${_formatAmount(pending)}",
-              Icons.pending,
-              Colors.orange,
-            ),
-          ),
+          Expanded(child: _summaryCard("Pending", "UGX ${_formatAmount(pending)}", Icons.pending, Colors.orange)),
         ],
       ),
     );
@@ -285,13 +229,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -301,19 +239,9 @@ class _DocumentsPageState extends State<DocumentsPage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(value,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              Text(label,
-                style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 10,
-                )),
+              Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text(label, style: const TextStyle(color: Colors.grey, fontSize: 10)),
             ],
           ),
         ],
@@ -323,10 +251,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
   
   Widget _invoiceCard(Invoice invoice) {
     Color statusColor = invoice.status == "Paid" ? Colors.green :
-                       invoice.status == "Partial" ? Colors.orange :
-                       Colors.red;
-    
-    // Determine document type
+                       invoice.status == "Partial" ? Colors.orange : Colors.red;
     bool isReceipt = invoice.id.startsWith('RCP');
     String documentType = isReceipt ? "Receipt" : "Invoice";
     
@@ -335,44 +260,25 @@ class _DocumentsPageState extends State<DocumentsPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: ExpansionTile(
         tilePadding: const EdgeInsets.all(16),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         leading: Container(
           padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: statusColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(
-            isReceipt ? Icons.receipt : Icons.description, 
-            color: statusColor, 
-            size: 24
-          ),
+          decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+          child: Icon(isReceipt ? Icons.receipt : Icons.description, color: statusColor, size: 24),
         ),
         title: Row(
           children: [
             Expanded(
-              child: Text(invoice.id,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                )),
+              child: Text(invoice.id, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: isReceipt 
-                    ? Colors.purple.withOpacity(0.1)
-                    : const Color(0xFF2563EB).withOpacity(0.1),
+                color: isReceipt ? Colors.purple.withOpacity(0.1) : const Color(0xFF2563EB).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(documentType,
@@ -388,14 +294,9 @@ class _DocumentsPageState extends State<DocumentsPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 4),
-            Text(invoice.customerName,
-              style: const TextStyle(fontSize: 13)),
+            Text(invoice.customerName, style: const TextStyle(fontSize: 13)),
             const SizedBox(height: 2),
-            Text(_formatDate(invoice.date),
-              style: const TextStyle(
-                fontSize: 11,
-                color: Colors.grey,
-              )),
+            Text(_formatDate(invoice.date), style: const TextStyle(fontSize: 11, color: Colors.grey)),
           ],
         ),
         trailing: Column(
@@ -409,45 +310,105 @@ class _DocumentsPageState extends State<DocumentsPage> {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(invoice.status,
-                style: TextStyle(
-                  color: statusColor,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                )),
+                style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 4),
             Text("UGX ${_formatAmount(invoice.amount)}",
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              )),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
           ],
         ),
         children: [
           const Divider(),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
+          
+          // Business Details
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.business, size: 16, color: Colors.blue.shade700),
+                    const SizedBox(width: 8),
+                    const Text("Business Details", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.blue)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ValueListenableBuilder<String>(
+                  valueListenable: BusinessData().name,
+                  builder: (context, businessName, _) => Text(businessName,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                ),
+                const SizedBox(height: 4),
+                ValueListenableBuilder<String>(
+                  valueListenable: BusinessData().email,
+                  builder: (context, businessEmail, _) => Text(businessEmail,
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
+                ),
+                const SizedBox(height: 2),
+                ValueListenableBuilder<String>(
+                  valueListenable: BusinessData().address,
+                  builder: (context, businessAddress, _) => Text(businessAddress,
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // Customer Details
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.green.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.person, size: 16, color: Colors.green.shade700),
+                    const SizedBox(width: 8),
+                    Text(isReceipt ? "Received From" : "Billed To",
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.green)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(invoice.customerName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(invoice.customerEmail, style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 12),
           _detailRow("Document Type", documentType),
           const SizedBox(height: 8),
           _detailRow("Items", invoice.items.length.toString()),
           const SizedBox(height: 8),
           _detailRow("Total Amount", "UGX ${_formatAmount(invoice.amount)}"),
           const SizedBox(height: 8),
-          _detailRow("Amount Paid", "UGX ${_formatAmount(invoice.paid)}",
-            valueColor: Colors.green),
+          _detailRow("Amount Paid", "UGX ${_formatAmount(invoice.paid)}", valueColor: Colors.green),
+          
           if (invoice.balance > 0) ...[
             const SizedBox(height: 8),
-            _detailRow("Balance Due", "UGX ${_formatAmount(invoice.balance)}",
-              valueColor: Colors.red),
+            _detailRow("Balance Due", "UGX ${_formatAmount(invoice.balance)}", valueColor: Colors.red),
           ],
           
-          // Show change due for receipts with overpayment
           if (invoice.id.startsWith('RCP') && invoice.paid > invoice.amount) ...[
             const SizedBox(height: 8),
-            _detailRow("Change Due", "UGX ${_formatAmount(invoice.paid - invoice.amount)}",
-              valueColor: Colors.orange),
+            _detailRow("Change Due", "UGX ${_formatAmount(invoice.paid - invoice.amount)}", valueColor: Colors.orange),
           ],
           
-          // Show partial payment indicator if balance is not zero (partial payment made)
           if (invoice.balance > 0 && invoice.paid > 0) ...[
             const SizedBox(height: 12),
             Container(
@@ -465,23 +426,11 @@ class _DocumentsPageState extends State<DocumentsPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          invoice.id.startsWith('RCP') 
-                              ? "Underpayment - Change Owed to Business"
-                              : "Partial Payment",
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                            color: Colors.orange,
-                          )),
+                        Text(isReceipt ? "Underpayment - Change Owed to Business" : "Partial Payment",
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.orange)),
                         const SizedBox(height: 2),
-                        Text(
-                          "${((invoice.paid / invoice.amount) * 100).toStringAsFixed(1)}% paid",
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey,
-                          ),
-                        ),
+                        Text("${((invoice.paid / invoice.amount) * 100).toStringAsFixed(1)}% paid",
+                          style: const TextStyle(fontSize: 11, color: Colors.grey)),
                       ],
                     ),
                   ),
@@ -490,7 +439,6 @@ class _DocumentsPageState extends State<DocumentsPage> {
             ),
           ],
           
-          // Show overpayment indicator for receipts with change due
           if (invoice.id.startsWith('RCP') && invoice.paid > invoice.amount) ...[
             const SizedBox(height: 12),
             Container(
@@ -509,19 +457,10 @@ class _DocumentsPageState extends State<DocumentsPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text("Overpayment - Change Due to Customer",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                            color: Colors.blue,
-                          )),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.blue)),
                         const SizedBox(height: 2),
-                        Text(
-                          "Return UGX ${_formatAmount(invoice.paid - invoice.amount)} to customer",
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey,
-                          ),
-                        ),
+                        Text("Return UGX ${_formatAmount(invoice.paid - invoice.amount)} to customer",
+                          style: const TextStyle(fontSize: 11, color: Colors.grey)),
                       ],
                     ),
                   ),
@@ -531,29 +470,20 @@ class _DocumentsPageState extends State<DocumentsPage> {
           ],
           
           const SizedBox(height: 16),
-          const Text("Items:",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-            )),
+          const Text("Items:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
           const SizedBox(height: 8),
           ...invoice.items.map((item) => Padding(
             padding: const EdgeInsets.only(bottom: 6),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Text(item.description,
-                    style: const TextStyle(fontSize: 12)),
-                ),
+                Expanded(child: Text(item.description, style: const TextStyle(fontSize: 12))),
                 Text("${item.quantity.toStringAsFixed(0)} × ${_formatAmount(item.rate)}",
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey,
-                  )),
+                  style: const TextStyle(fontSize: 11, color: Colors.grey)),
               ],
             ),
           )),
+          
           const SizedBox(height: 16),
           Row(
             children: [
@@ -562,9 +492,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
                   onPressed: () => _downloadInvoice(invoice),
                   icon: const Icon(Icons.download, size: 16),
                   label: const Text("Download"),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: Colors.grey.shade300),
-                  ),
+                  style: OutlinedButton.styleFrom(side: BorderSide(color: Colors.grey.shade300)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -573,15 +501,12 @@ class _DocumentsPageState extends State<DocumentsPage> {
                   onPressed: () => _shareInvoice(invoice),
                   icon: const Icon(Icons.share, color: Colors.white, size: 16),
                   label: const Text("Share", style: TextStyle(color: Colors.white)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2563EB),
-                  ),
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2563EB)),
                 ),
               ),
             ],
           ),
           
-          // Add Edit Payment button for documents with balance due
           if (invoice.balance > 0) ...[
             const SizedBox(height: 12),
             SizedBox(
@@ -590,9 +515,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
                 onPressed: () => _showEditPaymentDialog(invoice),
                 icon: const Icon(Icons.payments, color: Colors.white, size: 16),
                 label: const Text("Update Payment", style: TextStyle(color: Colors.white)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                ),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
               ),
             ),
           ],
@@ -605,33 +528,19 @@ class _DocumentsPageState extends State<DocumentsPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label,
-          style: const TextStyle(
-            color: Colors.grey,
-            fontSize: 13,
-          )),
-        Text(value,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
-            color: valueColor,
-          )),
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+        Text(value, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: valueColor)),
       ],
     );
   }
   
   String _formatAmount(double amount) {
-    if (amount >= 1000000) {
-      return "${(amount / 1000000).toStringAsFixed(1)}M";
-    } else if (amount >= 1000) {
-      return "${(amount / 1000).toStringAsFixed(0)}K";
-    }
+    if (amount >= 1000000) return "${(amount / 1000000).toStringAsFixed(1)}M";
+    if (amount >= 1000) return "${(amount / 1000).toStringAsFixed(0)}K";
     return amount.toStringAsFixed(0);
   }
   
-  String _formatDate(DateTime date) {
-    return "${date.day}/${date.month}/${date.year}";
-  }
+  String _formatDate(DateTime date) => "${date.day}/${date.month}/${date.year}";
   
   void _downloadInvoice(Invoice invoice) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -674,9 +583,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
               child: const Icon(Icons.payments, color: Colors.green),
             ),
             const SizedBox(width: 12),
-            const Expanded(
-              child: Text("Update Payment", style: TextStyle(fontSize: 18)),
-            ),
+            const Expanded(child: Text("Update Payment", style: TextStyle(fontSize: 18))),
           ],
         ),
         content: Column(
@@ -695,11 +602,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text("Document:", style: TextStyle(fontSize: 12)),
-                      Text(invoice.id, 
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        )),
+                      Text(invoice.id, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -708,10 +611,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
                     children: [
                       const Text("Total Amount:", style: TextStyle(fontSize: 12)),
                       Text("UGX ${invoice.amount.toStringAsFixed(0)}", 
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        )),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -720,24 +620,15 @@ class _DocumentsPageState extends State<DocumentsPage> {
                     children: [
                       const Text("Balance Due:", style: TextStyle(fontSize: 12)),
                       Text("UGX ${invoice.balance.toStringAsFixed(0)}", 
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          color: Colors.red,
-                        )),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.red)),
                     ],
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
-              "Enter Total Amount Paid:",
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            const Text("Enter Total Amount Paid:",
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             TextField(
               controller: paymentController,
@@ -747,9 +638,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
                 labelText: "Amount Paid (UGX)",
                 hintText: "0",
                 prefixIcon: const Icon(Icons.money, color: Colors.green),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(color: Colors.green, width: 2),
@@ -790,20 +679,14 @@ class _DocumentsPageState extends State<DocumentsPage> {
               
               if (newPaid < 0) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Amount cannot be negative"),
-                    backgroundColor: Colors.red,
-                  ),
+                  const SnackBar(content: Text("Amount cannot be negative"), backgroundColor: Colors.red),
                 );
                 return;
               }
               
-              // Update the payment
               BusinessData().updateInvoicePayment(invoice.id, newPaid);
-              
               Navigator.pop(context);
               
-              // Show success message
               String message;
               if (newPaid >= invoice.amount) {
                 message = "Payment updated! Invoice is now fully paid.";
@@ -824,20 +707,15 @@ class _DocumentsPageState extends State<DocumentsPage> {
                   ),
                   backgroundColor: Colors.green,
                   behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
               );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text("Update Payment", 
-              style: TextStyle(color: Colors.white)),
+            child: const Text("Update Payment", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

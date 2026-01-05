@@ -7,6 +7,7 @@ import 'package:swiftbill_app/security_page.dart';
 import 'package:swiftbill_app/theme_settings_page.dart';
 import 'package:swiftbill_app/upgrade_page.dart';
 import 'package:swiftbill_app/login_page.dart';
+import 'package:swiftbill_app/auth_service.dart';
 import 'dart:io';
 
 class ProfilePage extends StatefulWidget {
@@ -563,6 +564,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     );
   }
 
+  // SIMPLE LOGOUT - TASKFLOW PATTERN
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -598,12 +600,23 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
             ),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
+              // Close the dialog
               Navigator.pop(context);
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (context) => const LoginPage()),
-                (route) => false,
-              );
+              
+              // CRITICAL FIX: Pop the ProfilePage too (go back to previous page)
+              Navigator.pop(context);
+              
+              // SIMPLE PATTERN FROM TASKFLOW - Just sign out and navigate
+              await AuthService().signOut();
+              
+              // Navigate to login and clear stack (StreamBuilder will handle it)
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                  (route) => false,
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,

@@ -7,13 +7,15 @@ import 'package:swiftbill_app/appointments_page.dart';
 import 'package:swiftbill_app/analytics_page.dart';
 import 'package:swiftbill_app/profile_page.dart';
 import 'package:swiftbill_app/business_data.dart';
-import 'package:swiftbill_app/login_page.dart';
 import 'package:swiftbill_app/premium_gate.dart';
 import 'package:swiftbill_app/premium_manager.dart';
 import 'package:swiftbill_app/upgrade_page.dart';
+import 'package:swiftbill_app/auth_service.dart';
+import 'package:swiftbill_app/login_page.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
+  
   @override
   Widget build(BuildContext context) {
     return Drawer(
@@ -384,6 +386,7 @@ class AppDrawer extends StatelessWidget {
     return amount.toStringAsFixed(0);
   }
   
+  // SIMPLE LOGOUT - TASKFLOW PATTERN
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -416,12 +419,23 @@ class AppDrawer extends StatelessWidget {
             ),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
+              // Close the dialog
               Navigator.pop(context);
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (context) => const LoginPage()),
-                (route) => false,
-              );
+              
+              // Close the drawer
+              Navigator.pop(context);
+              
+              // SIMPLE PATTERN FROM TASKFLOW - Just sign out and navigate
+              await AuthService().signOut();
+              
+              // Navigate to login and clear stack (StreamBuilder will handle it)
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                  (route) => false,
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,

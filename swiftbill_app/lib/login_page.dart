@@ -20,6 +20,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   @override
   void initState() {
     super.initState();
+    
+    // CRITICAL FIX: Reset loading state when page initializes
+    isLoading = false;
+    
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -147,7 +151,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         ),
                         const SizedBox(height: 24),
                         OutlinedButton(
-                          onPressed: () => _handleGuestLogin(context),
+                          onPressed: isLoading ? null : () => _handleGuestLogin(context),
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size(double.infinity, 54),
                             side: BorderSide(color: Colors.grey.shade300),
@@ -246,9 +250,16 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     );
   }
   
-  // OPTIMIZED: Waits for auth state to propagate, then lets StreamBuilder handle navigation
+  // FIXED: Better state management and cleanup
   void _handleGoogleLogin(BuildContext context) async {
     print('🔵 [${DateTime.now()}] Google login initiated');
+    
+    // Prevent multiple simultaneous login attempts
+    if (isLoading) {
+      print('⚠️ Login already in progress, ignoring duplicate request');
+      return;
+    }
+    
     setState(() => isLoading = true);
     
     try {
@@ -283,18 +294,25 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
             print('✅ Auth state confirmed on retry');
           } else {
             print('❌ Auth state still null after retry');
-            setState(() => isLoading = false);
+            // CRITICAL: Reset loading state if auth failed
+            if (mounted) {
+              setState(() => isLoading = false);
+            }
           }
         }
       } else {
         print('⚠️ User cancelled Google sign-in');
-        setState(() => isLoading = false);
+        // CRITICAL: Reset loading state when cancelled
+        if (mounted) {
+          setState(() => isLoading = false);
+        }
       }
     } catch (e) {
       print('❌ Google login error: $e');
-      setState(() => isLoading = false);
-      
-      if (context.mounted) {
+      // CRITICAL: Always reset loading state on error
+      if (mounted) {
+        setState(() => isLoading = false);
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Error: ${e.toString()}"),
@@ -311,6 +329,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   
   void _handleAppleLogin(BuildContext context) async {
     print('🍎 Apple login initiated');
+    
+    if (isLoading) return;
+    
     setState(() => isLoading = true);
     
     try {
@@ -321,13 +342,15 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         await Future.delayed(const Duration(milliseconds: 150));
         // StreamBuilder will handle navigation
       } else {
-        setState(() => isLoading = false);
+        if (mounted) {
+          setState(() => isLoading = false);
+        }
       }
     } catch (e) {
       print('❌ Apple login error: $e');
-      setState(() => isLoading = false);
-      
-      if (context.mounted) {
+      if (mounted) {
+        setState(() => isLoading = false);
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Error: ${e.toString()}"),
@@ -344,6 +367,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   
   void _handleGuestLogin(BuildContext context) async {
     print('👤 Guest login initiated');
+    
+    if (isLoading) return;
+    
     setState(() => isLoading = true);
     
     try {
@@ -353,9 +379,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       // StreamBuilder will handle navigation
     } catch (e) {
       print('❌ Guest login error: $e');
-      setState(() => isLoading = false);
-      
-      if (context.mounted) {
+      if (mounted) {
+        setState(() => isLoading = false);
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Error: ${e.toString()}"),

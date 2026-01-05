@@ -87,26 +87,17 @@ class _SwiftBillAppState extends State<SwiftBillApp> {
       ),
       themeMode: _themeManager.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       
-      // FIXED: Better StreamBuilder implementation
+      // FIXED: Use simple StreamBuilder like TaskFlow (NO KEYS!)
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
-          print('🔄 Auth State Update: ${snapshot.connectionState}');
-          
           // Show loading while checking auth state
           if (snapshot.connectionState == ConnectionState.waiting) {
             print('⏳ Waiting for auth state...');
             return const Scaffold(
               backgroundColor: Colors.white,
               body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Loading...'),
-                  ],
-                ),
+                child: CircularProgressIndicator(),
               ),
             );
           }
@@ -134,21 +125,15 @@ class _SwiftBillAppState extends State<SwiftBillApp> {
             );
           }
           
-          // CRITICAL FIX: Check auth state is active before deciding
-          final user = snapshot.data;
-          final hasUser = snapshot.hasData && user != null;
-          
-          if (hasUser) {
+          // CRITICAL FIX: Simple pattern like TaskFlow - NO KEYS!
+          if (snapshot.hasData) {
             print('✅ User authenticated, showing HomePage');
-            print('   Email: ${user.email}');
-            // IMPORTANT: Return new instance to force rebuild
-            return const HomePage(key: ValueKey('home_page'));
+            return const HomePage(); // Simple, no key
           }
           
           // User is not signed in
           print('❌ No user authenticated, showing LoginPage');
-          // IMPORTANT: Return new instance to force rebuild
-          return const LoginPage(key: ValueKey('login_page'));
+          return const LoginPage(); // Simple, no key
         },
       ),
     );

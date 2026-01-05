@@ -89,6 +89,583 @@ class _InvoicePageState extends State<InvoicePage> {
     super.dispose();
   }
   
+  void _showPreview() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) {
+          String currencyPrefix = selectedCurrency.split(' ')[0] == 'UGX' ? 'USh' : '\$';
+          String invoiceId = isInvoice 
+              ? "INV-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}"
+              : "RCP-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}";
+          
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isInvoice ? const Color(0xFF2563EB) : Colors.green.shade600,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isInvoice ? Icons.visibility : Icons.receipt_long,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          isInvoice ? "Invoice Preview" : "Receipt Preview",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(20),
+                    children: [
+                      // Business Details
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Colors.blue.shade50, Colors.purple.shade50],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.business, color: Colors.blue.shade700, size: 20),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  "FROM",
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            ValueListenableBuilder<String>(
+                              valueListenable: BusinessData().name,
+                              builder: (context, name, _) => Text(
+                                name,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            ValueListenableBuilder<String>(
+                              valueListenable: BusinessData().email,
+                              builder: (context, email, _) => Text(
+                                email,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            ValueListenableBuilder<String>(
+                              valueListenable: BusinessData().address,
+                              builder: (context, address, _) => Text(
+                                address,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Document Info
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isInvoice ? "INVOICE #" : "RECEIPT #",
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    invoiceId,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    "DATE",
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    "${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}",
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Customer Details
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Colors.green.shade50, Colors.teal.shade50],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.green.withOpacity(0.2)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.person, color: Colors.green.shade700, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  isInvoice ? "BILL TO" : "RECEIVED FROM",
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _customerNameController.text.isEmpty 
+                                  ? "Customer Name" 
+                                  : _customerNameController.text,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _customerEmailController.text.isEmpty 
+                                  ? "customer@email.com" 
+                                  : _customerEmailController.text,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                            if (_customerAddressController.text.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                _customerAddressController.text,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 20),
+                      
+                      // Items Table
+                      const Text(
+                        "ITEMS",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(12),
+                                ),
+                              ),
+                              child: Row(
+                                children: const [
+                                  Expanded(
+                                    flex: 3,
+                                    child: Text(
+                                      "Description",
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      "Qty",
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      "Rate",
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.right,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      "Amount",
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.right,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ...List.generate(descControllers.length, (index) {
+                              if (descControllers[index].text.isEmpty) {
+                                return const SizedBox.shrink();
+                              }
+                              return Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                    top: BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 3,
+                                      child: Text(
+                                        descControllers[index].text,
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Text(
+                                        qtyControllers[index].text,
+                                        style: const TextStyle(fontSize: 12),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Text(
+                                        "$currencyPrefix${rateControllers[index].text}",
+                                        style: const TextStyle(fontSize: 12),
+                                        textAlign: TextAlign.right,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        "$currencyPrefix${amounts[index].toStringAsFixed(0)}",
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        textAlign: TextAlign.right,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 20),
+                      
+                      // Payment Details
+                      if (!isInvoice && _paymentMethodController.text.isNotEmpty) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                "Payment Method:",
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                _paymentMethodController.text,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      
+                      // Totals
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isInvoice ? Colors.blue.shade50 : Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isInvoice 
+                                ? Colors.blue.withOpacity(0.3)
+                                : Colors.green.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text("Subtotal:",
+                                  style: TextStyle(fontSize: 14)),
+                                Text("$currencyPrefix${total.toStringAsFixed(2)}",
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  )),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  isInvoice ? "Amount Paid:" : "Amount Received:",
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                                Text("$currencyPrefix${paid.toStringAsFixed(2)}",
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.green,
+                                  )),
+                              ],
+                            ),
+                            const Divider(height: 20),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  due > 0 
+                                      ? "Balance Due:" 
+                                      : (paid > total ? "Change Due:" : "Balance:"),
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  "$currencyPrefix${due.abs().toStringAsFixed(2)}",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: due > 0 
+                                        ? Colors.red 
+                                        : (due < 0 ? Colors.orange : Colors.green),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      // Notes
+                      if (_notesController.text.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Notes:",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _notesController.text,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      
+                      const SizedBox(height: 30),
+                      
+                      // Action Buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                side: BorderSide(color: Colors.grey.shade400),
+                              ),
+                              child: const Text("Edit"),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _saveInvoice();
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isInvoice 
+                                    ? const Color(0xFF2563EB) 
+                                    : Colors.green.shade600,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.check, color: Colors.white, size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    isInvoice ? "Save Invoice" : "Save Receipt",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+  
   @override
   Widget build(BuildContext context) {
     String currencyPrefix = selectedCurrency.split(' ')[0] == 'UGX' ? 'USh' : '\$';
@@ -106,6 +683,14 @@ class _InvoicePageState extends State<InvoicePage> {
           style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         actions: [
+          TextButton.icon(
+            onPressed: _showPreview,
+            icon: const Icon(Icons.visibility, size: 18),
+            label: const Text("Preview"),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF2563EB),
+            ),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text("Cancel", style: TextStyle(color: Colors.grey, fontSize: 14)),
@@ -197,7 +782,6 @@ class _InvoicePageState extends State<InvoicePage> {
               _inputLabel("CUSTOMER ADDRESS"),
               _whiteTextField("Customer Address", controller: _customerAddressController, maxLines: 2),
               
-              // Receipt-specific: Payment Method
               if (!isInvoice) ...[
                 const SizedBox(height: 12),
                 _inputLabel("PAYMENT METHOD *"),
@@ -332,7 +916,6 @@ class _InvoicePageState extends State<InvoicePage> {
               
               const SizedBox(height: 24),
               
-              // Different labels for Invoice vs Receipt
               if (isInvoice) ...[
                 _inputLabel("AMOUNT PAID"),
                 _coloredTextField(Colors.green.shade50, paidController, currencyPrefix),
@@ -641,7 +1224,6 @@ class _InvoicePageState extends State<InvoicePage> {
       return;
     }
     
-    // For receipts, ensure payment amount is entered
     if (!isInvoice && paid == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -668,10 +1250,8 @@ class _InvoicePageState extends State<InvoicePage> {
     
     final prefix = isInvoice ? "INV" : "RCP";
     
-    // Determine status based on document type and payment
     String status;
     if (isInvoice) {
-      // For invoices: check if fully paid, partially paid, or pending
       if (paid >= total) {
         status = "Paid";
       } else if (paid > 0) {
@@ -680,13 +1260,12 @@ class _InvoicePageState extends State<InvoicePage> {
         status = "Pending";
       }
     } else {
-      // For receipts: check if exact amount, overpaid (change due), or underpaid
       if (paid >= total) {
-        status = "Paid"; // Exact or overpaid (will show change due in UI)
+        status = "Paid";
       } else if (paid > 0) {
-        status = "Partial"; // Customer didn't pay enough
+        status = "Partial";
       } else {
-        status = "Pending"; // No payment received (shouldn't happen for receipts)
+        status = "Pending";
       }
     }
     
